@@ -251,12 +251,13 @@ Observability:
 
 Blocking checks:
 
-- Go tests.
-- Go lint/vet.
-- SQL migration check.
-- OpenAPI generation diff check.
-- TypeScript lint/build.
-- Swift build/tests when macOS runner exists.
+- `make verify` is the local and CI baseline gate.
+- Required docs, Open Pilot templates, and common committed secret filenames.
+- Go formatting, vet, and tests when `apps/api` or `apps/worker` modules are scaffolded.
+- OpenAPI contract presence/lint checks when `packages/openapi` is scaffolded.
+- TypeScript lint, build, and tests when web app package manifests are scaffolded.
+- Swift/Xcode tests on macOS runners only; Linux runners skip Swift checks with an explicit message.
+- SQL migration checks once migration tooling is scaffolded.
 
 Testing requirements before beta:
 

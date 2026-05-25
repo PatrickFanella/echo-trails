@@ -30,7 +30,7 @@ Planned beta:
 make verify
 ```
 
-Linux verification currently checks repo structure/docs/Open Pilot templates and skips implementation-specific checks until scaffolding lands.
+Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, and scaffold-aware Go, TypeScript, OpenAPI, and Swift gates. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS.
 
 ## Key docs
 
