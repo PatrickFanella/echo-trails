@@ -253,7 +253,7 @@ Blocking checks:
 
 - Go tests.
 - Go lint/vet.
-- SQL migration check.
+- SQL migration pairing/static checks plus embedded PGlite/PostGIS up/down execution in `make verify`; live Postgres/PostGIS migrate-up coverage when a throwaway database is supplied.
 - OpenAPI generation diff check.
 - TypeScript lint/build.
 - Swift build/tests when macOS runner exists.
@@ -278,7 +278,7 @@ Testing requirements before beta:
 
 ### Phase 1: Domain/API foundation
 
-- Postgres migrations for users, places, Echoes, replies, media, moderation, auth.
+- Core Postgres/PostGIS migrations for users, profiles, sessions, devices, identities, consents, places, Echoes, replies, media, moderation, analytics, audit, jobs, and idempotency.
 - OpenAPI skeleton.
 - Auth flows.
 - Place search/request model.

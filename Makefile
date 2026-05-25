@@ -1,12 +1,12 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
-.PHONY: help verify fmt lint test docs-check open-pilot-check secrets-check xcode-note
+.PHONY: help verify fmt lint test db-migration-check docs-check open-pilot-check secrets-check xcode-note
 
 help: ## Show commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-verify: fmt lint test docs-check open-pilot-check secrets-check xcode-note ## Run all checks
+verify: fmt lint test db-migration-check docs-check open-pilot-check secrets-check xcode-note ## Run all checks
 
 fmt: ## Format files where repo tooling is available
 	@if [ -d apps/api ]; then cd apps/api && gofmt -w $$(find . -name '*.go' -type f); else echo 'skip gofmt: apps/api/ not present yet'; fi
@@ -23,6 +23,9 @@ test: ## Run deterministic tests available on this host
 	@if [ -d apps/worker ]; then cd apps/worker && go test ./...; else echo 'skip go test: apps/worker/ not present yet'; fi
 	@if [ -d apps/admin-web ]; then cd apps/admin-web && npm test -- --run; else echo 'skip admin-web tests: apps/admin-web/ not present yet'; fi
 	@if [ -d apps/public-web ]; then cd apps/public-web && npm test -- --run; else echo 'skip public-web tests: apps/public-web/ not present yet'; fi
+
+db-migration-check: ## Execute SQL migrations against embedded Postgres/PostGIS when scaffolded
+	@if [ -f apps/api/package.json ]; then cd apps/api && npm ci && npm run test:migrations; else echo 'skip DB migration check: apps/api/package.json not present yet'; fi
 
 docs-check: ## Verify required docs exist
 	@test -f README.md

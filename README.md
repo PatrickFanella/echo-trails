@@ -30,7 +30,7 @@ Planned beta:
 make verify
 ```
 
-Linux verification currently checks repo structure/docs/Open Pilot templates and skips implementation-specific checks until scaffolding lands.
+Linux verification currently checks repo structure/docs, Open Pilot templates, committed secret filenames, Go migration unit tests, and embedded PGlite/PostGIS up/down SQL execution. The live Postgres/PostGIS migrate-up integration test also runs when `ECHOTRAILS_TEST_DATABASE_URL` and `psql` are available.
 
 ## Key docs
 
@@ -39,6 +39,7 @@ Linux verification currently checks repo structure/docs/Open Pilot templates and
 - Technical plan: `docs/technical-plan.md`
 - Open Pilot readiness: `docs/open-pilot.md`
 - Labels: `docs/labels.md`
+- Database migration runbook: `docs/runbooks/database-migrations.md`
 
 ## Open Pilot
 

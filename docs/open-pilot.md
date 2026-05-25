@@ -35,6 +35,7 @@ Generated iOS files are reference-only unless an issue explicitly says to modify
 ## Test command guidance
 
 Prefer the narrowest deterministic command that proves the requested change.
+Database migration changes should include migration unit checks and embedded PGlite/PostGIS up/down SQL execution in `make verify`; live migrate-up coverage runs when a throwaway Postgres/PostGIS URL is supplied via `ECHOTRAILS_TEST_DATABASE_URL`.
 
 Examples:
 

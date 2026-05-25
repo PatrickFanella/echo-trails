@@ -8,6 +8,8 @@
 
 import XCTest
 
+node_modules/
+
 
 final class EchoTrailsUITests: XCTestCase {
 

@@ -1,0 +1,12 @@
+{
+  "name": "@echotrails/api-migration-checks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:migrations": "node internal/db/migrations/pglite-check.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.4.3",
+    "@electric-sql/pglite-postgis": "^0.0.5"
+  }
+}
