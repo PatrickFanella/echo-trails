@@ -160,6 +160,8 @@ Initial resource groups:
 
 Every mutating mobile request should support idempotency keys.
 
+Current scoped location proof implementation target: `apps/api/internal/locationproof` contains pure Go validation for Echo creation-token preflight. It validates proof freshness, GPS accuracy, selected Place radius/boundary, restricted Place status, ambiguous eligible Places, and trust/rate gate decisions before issuing an opaque signed creation token. The token is bound to user, Place, proof time, issue time, and expiry, and must not expose exact private coordinates.
+
 ## Upload and publish flow
 
 1. Client selects/validates Place.
