@@ -160,6 +160,8 @@ Initial resource groups:
 
 Every mutating mobile request should support idempotency keys.
 
+Current scoped profile implementation target: `apps/api` provides standard-library Go handlers for `GET /me`, `PATCH /me`, and `GET /users/{handle}` backed by an in-memory profile store boundary. Handles are normalized, validated, unique, and include handle-change cooldown scaffolding. Public handle responses are pseudonymous and must not expose private account fields such as email, internal user IDs, session data, or handle-change state.
+
 ## Upload and publish flow
 
 1. Client selects/validates Place.
