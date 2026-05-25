@@ -130,6 +130,14 @@ Public API exposes this as `stitches`; DB remains flexible with `echo_links`.
 
 Use cursor pagination for feeds/search/lists.
 
+Shared API primitives live under `apps/api/internal/primitives` and establish the first reusable server semantics:
+
+- UUIDv7 public IDs with timestamp ordering.
+- UTC server timestamp normalization.
+- Opaque cursor encoding/decoding using timestamp plus UUID tie-breaker.
+- Idempotency key replay semantics with request fingerprint protection.
+- Structured JSON error envelopes shaped as `{ "error": { "code", "title", "detail", "meta" } }`.
+
 Initial resource groups:
 
 - `/auth/apple`
