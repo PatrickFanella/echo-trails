@@ -1,0 +1,9 @@
+{
+  "name": "echo-trails",
+  "status": "generated-prototype-reference-only",
+  "docs": {
+    "prd": "docs/PRD.md",
+    "technicalPlan": "docs/technical-plan.md",
+    "glossary": "CONTEXT.md"
+  }
+}
