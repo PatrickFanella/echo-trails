@@ -7,6 +7,7 @@ EchoTrails documentation is split by purpose.
 - `PRD.md`
 - `technical-plan.md`
 - `../CONTEXT.md`
+- `adr/README.md`
 
 ## Open Pilot / maintenance
 
@@ -18,4 +19,4 @@ EchoTrails documentation is split by purpose.
 
 - `superpowers/plans/`
 
-Use plans for execution checklists. Keep `CONTEXT.md` as glossary only.
+Use plans for execution checklists. Keep `CONTEXT.md` as glossary only. ADRs explain durable architecture decisions; `PRD.md` and `technical-plan.md` remain canonical for product requirements and target architecture.

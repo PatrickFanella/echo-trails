@@ -37,6 +37,14 @@ docs-check: ## Verify required docs exist
 	@test -f docs/open-pilot.md
 	@test -f docs/labels.md
 	@test -f docs/runbooks/README.md
+	@test -f docs/adr/README.md
+	@for adr in docs/adr/[0-9][0-9][0-9][0-9]-*.md; do \
+		test -f "$$adr"; \
+		grep -q '^## Status$$' "$$adr"; \
+		grep -q '^## Context$$' "$$adr"; \
+		grep -q '^## Decision$$' "$$adr"; \
+		grep -q '^## Consequences$$' "$$adr"; \
+	done
 
 open-pilot-check: ## Verify Open Pilot templates exist
 	@test -f .gitea/ISSUE_TEMPLATE/open-pilot-task.yaml

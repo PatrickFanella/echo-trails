@@ -335,16 +335,9 @@ First implementation should be scaffolding only, not feature work.
 9. Remove extraction-failed test artifacts.
 10. Add CI skeleton and README commands.
 
-## ADR candidates
+## Architecture decision records
 
-Create ADRs selectively later for:
-
-- Custom Go API over managed backend.
-- Provider-agnostic Place model.
-- Self-hosted beta on homelab.
-- Free/local conservative moderation.
-- Monorepo + OpenAPI contract.
-- Redis queue despite Postgres already present.
+Initial ADRs live in `docs/adr/` and document durable decisions from this plan. ADRs explain the decision context and consequences; this technical plan remains canonical for target architecture and implementation sequencing.
 
 ## Known risks
 
