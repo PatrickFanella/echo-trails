@@ -160,6 +160,8 @@ Initial resource groups:
 
 Every mutating mobile request should support idempotency keys.
 
+The scoped Sign in with Apple server boundary lives under `apps/api/internal/auth/apple`. It defines the Apple identity verifier interface, a deterministic test verifier, identity-linking service semantics, and production config placeholders. Production Apple verification must read only the secret names `ECHOTRAILS_APPLE_TEAM_ID`, `ECHOTRAILS_APPLE_CLIENT_ID`, `ECHOTRAILS_APPLE_KEY_ID`, and `ECHOTRAILS_APPLE_PRIVATE_KEY`; no secret values or signing material belong in git.
+
 ## Upload and publish flow
 
 1. Client selects/validates Place.
