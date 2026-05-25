@@ -30,7 +30,18 @@ Planned beta:
 make verify
 ```
 
-Linux verification currently checks repo structure/docs/Open Pilot templates and skips implementation-specific checks until scaffolding lands.
+Linux verification checks repo structure/docs/Open Pilot templates and, once `apps/api` exists, runs Go fmt/vet/tests for the API.
+
+## API
+
+The Go API lives under `apps/api` and currently exposes passwordless email auth and session endpoints:
+
+- `POST /auth/email/start`
+- `POST /auth/email/verify`
+- `POST /sessions/refresh`
+- `POST /sessions/logout`
+
+Local development can run the API with `ECHOTRAILS_AUTH_EMAIL_DEV=1`; that opt-in dev adapter prints email codes for manual testing and must not be used in production.
 
 ## Key docs
 
