@@ -30,7 +30,7 @@ Planned beta:
 make verify
 ```
 
-Linux verification checks repo structure/docs/Open Pilot templates and, once `apps/api` exists, runs Go fmt/vet/tests for the API.
+Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, and scaffold-aware Go, TypeScript, OpenAPI, and Swift gates. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API.
 
 ## API
 

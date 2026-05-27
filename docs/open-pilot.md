@@ -35,6 +35,7 @@ Generated iOS files are reference-only unless an issue explicitly says to modify
 ## Test command guidance
 
 Prefer the narrowest deterministic command that proves the requested change.
+The repository baseline is `make verify`; the `.gitea` workflow runs the same command for push and pull request checks. The baseline is Linux-safe and skips unscaffolded Go, TypeScript, OpenAPI, and non-macOS Swift checks with explicit messages.
 
 Examples:
 
