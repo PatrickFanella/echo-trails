@@ -2,29 +2,36 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 )
 
 type Config struct {
 	Store      Store
+	Profiles   ProfileStore
 	Sender     EmailSender
 	Clock      clock
 	CodePepper []byte
 }
 
 type Server struct {
-	store  Store
-	sender EmailSender
-	clock  clock
-	pepper []byte
-	mux    *http.ServeMux
+	store    Store
+	profiles ProfileStore
+	sender   EmailSender
+	clock    clock
+	pepper   []byte
+	mux      *http.ServeMux
 }
 
 func NewServer(cfg Config) *Server {
 	if cfg.Store == nil {
 		cfg.Store = NewMemoryStore()
+	}
+	if cfg.Profiles == nil {
+		cfg.Profiles = NewMemoryProfileStore()
 	}
 	if cfg.Sender == nil {
 		cfg.Sender = DevEmailSender{}
@@ -39,10 +46,11 @@ func NewServer(cfg Config) *Server {
 		}
 		cfg.CodePepper = pepper
 	}
-	s := &Server{store: cfg.Store, sender: cfg.Sender, clock: cfg.Clock, pepper: cfg.CodePepper, mux: http.NewServeMux()}
+	s := &Server{store: cfg.Store, profiles: cfg.Profiles, sender: cfg.Sender, clock: cfg.Clock, pepper: cfg.CodePepper, mux: http.NewServeMux()}
 	s.routes()
 	return s
 }
+
 func (s *Server) Router() http.Handler { return s.mux }
 
 func (s *Server) routes() {
@@ -50,6 +58,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /auth/email/verify", s.handleVerify)
 	s.mux.HandleFunc("POST /sessions/refresh", s.handleRefresh)
 	s.mux.HandleFunc("POST /sessions/logout", s.handleLogout)
+	s.mux.HandleFunc("GET /me", s.handleGetMe)
+	s.mux.HandleFunc("PATCH /me", s.handlePatchMe)
+	s.mux.HandleFunc("GET /users/{handle}", s.handleGetPublicProfile)
 }
 
 func (s *Server) writeJSON(w http.ResponseWriter, code int, v any) {
@@ -57,7 +68,92 @@ func (s *Server) writeJSON(w http.ResponseWriter, code int, v any) {
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
 }
+
 func decodeJSON(r *http.Request, v any) error { return json.NewDecoder(r.Body).Decode(v) }
+
+func (s *Server) writeError(w http.ResponseWriter, status int, code, title string) {
+	s.writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "title": title}})
+}
+
+func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
+	userID, _, ok := authenticatedUser(r)
+	if !ok {
+		s.writeError(w, http.StatusUnauthorized, "unauthorized", "Unauthorized")
+		return
+	}
+	profile, found, err := s.profiles.GetProfileByUserID(r.Context(), userID)
+	if err != nil {
+		slog.Error("profile lookup failed", "error", "get_me_failed")
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
+		return
+	}
+	if !found {
+		s.writeError(w, http.StatusNotFound, "profile_not_found", "Profile not found")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, toMeProfile(profile, s.clock.Now()))
+}
+
+func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
+	userID, email, ok := authenticatedUser(r)
+	if !ok {
+		s.writeError(w, http.StatusUnauthorized, "unauthorized", "Unauthorized")
+		return
+	}
+	var req UpsertProfileRequest
+	if err := decodeJSON(r, &req); err != nil {
+		s.writeError(w, http.StatusBadRequest, "bad_request", "Bad request")
+		return
+	}
+	profile, err := s.profiles.UpsertProfile(r.Context(), userID, email, req, s.clock.Now())
+	if err != nil {
+		status, code, title := profileError(err)
+		s.writeError(w, status, code, title)
+		return
+	}
+	slog.Info("profile upserted", "user_id", userID, "handle", profile.Handle)
+	s.writeJSON(w, http.StatusOK, toMeProfile(profile, s.clock.Now()))
+}
+
+func (s *Server) handleGetPublicProfile(w http.ResponseWriter, r *http.Request) {
+	handle, err := ValidateHandle(r.PathValue("handle"))
+	if err != nil {
+		s.writeError(w, http.StatusBadRequest, "invalid_handle", "Invalid handle")
+		return
+	}
+	profile, found, err := s.profiles.GetProfileByHandle(r.Context(), handle)
+	if err != nil {
+		slog.Error("profile lookup failed", "error", "get_public_profile_failed")
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
+		return
+	}
+	if !found {
+		s.writeError(w, http.StatusNotFound, "profile_not_found", "Profile not found")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, toPublicProfile(profile))
+}
+
+func authenticatedUser(r *http.Request) (userID, email string, ok bool) {
+	userID = strings.TrimSpace(r.Header.Get("X-EchoTrails-User-ID"))
+	if userID == "" {
+		return "", "", false
+	}
+	return userID, strings.TrimSpace(r.Header.Get("X-EchoTrails-User-Email")), true
+}
+
+func profileError(err error) (int, string, string) {
+	switch {
+	case errors.Is(err, ErrInvalidHandle):
+		return http.StatusBadRequest, "invalid_handle", "Invalid handle"
+	case errors.Is(err, ErrHandleTaken):
+		return http.StatusConflict, "handle_taken", "Handle is already taken"
+	case errors.Is(err, ErrHandleChangeTooSoon):
+		return http.StatusConflict, "handle_change_cooldown", "Handle change cooldown is active"
+	default:
+		return http.StatusInternalServerError, "internal_error", "Internal server error"
+	}
+}
 
 func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	var req StartEmailRequest
