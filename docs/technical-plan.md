@@ -130,6 +130,14 @@ Public API exposes this as `stitches`; DB remains flexible with `echo_links`.
 
 Use cursor pagination for feeds/search/lists.
 
+Shared API primitives live under `apps/api/internal/primitives` and establish the first reusable server semantics:
+
+- UUIDv7 public IDs with timestamp ordering.
+- UTC server timestamp normalization.
+- Opaque cursor encoding/decoding using timestamp plus UUID tie-breaker.
+- Idempotency key replay semantics with request fingerprint protection.
+- Structured JSON error envelopes shaped as `{ "error": { "code", "title", "detail", "meta" } }`.
+
 Initial resource groups:
 
 - `/auth/apple`
@@ -161,6 +169,10 @@ Initial resource groups:
 Every mutating mobile request should support idempotency keys.
 
 Current scoped location proof implementation target: `apps/api/internal/locationproof` contains pure Go validation for Echo creation-token preflight. It validates proof freshness, GPS accuracy, selected Place radius/boundary, restricted Place status, ambiguous eligible Places, and trust/rate gate decisions before issuing an opaque signed creation token. The token is bound to user, Place, proof time, issue time, and expiry, and must not expose exact private coordinates.
+
+The scoped Sign in with Apple server boundary lives under `apps/api/internal/auth/apple`. It defines the Apple identity verifier interface, a deterministic test verifier, identity-linking service semantics, and production config placeholders. Production Apple verification must read only the secret names `ECHOTRAILS_APPLE_TEAM_ID`, `ECHOTRAILS_APPLE_CLIENT_ID`, `ECHOTRAILS_APPLE_KEY_ID`, and `ECHOTRAILS_APPLE_PRIVATE_KEY`; no secret values or signing material belong in git.
+
+Current scoped implementation target: `apps/api` provides standard-library Go handlers for passwordless email auth and session refresh/logout; it is intentionally storage/provider-agnostic for later persistence swaps. The local dev email adapter is explicit opt-in only and production must configure a real provider before beta.
 
 ## Upload and publish flow
 
@@ -253,12 +265,13 @@ Observability:
 
 Blocking checks:
 
-- Go tests.
-- Go lint/vet.
-- SQL migration check.
-- OpenAPI generation diff check.
-- TypeScript lint/build.
-- Swift build/tests when macOS runner exists.
+- `make verify` is the local and CI baseline gate.
+- Required docs, Open Pilot templates, and common committed secret filenames.
+- Go formatting, vet, and tests when `apps/api` or `apps/worker` modules are scaffolded.
+- OpenAPI contract presence/lint checks when `packages/openapi` is scaffolded.
+- TypeScript lint, build, and tests when web app package manifests are scaffolded.
+- Swift/Xcode tests on macOS runners only; Linux runners skip Swift checks with an explicit message.
+- SQL migration checks once migration tooling is scaffolded.
 
 Testing requirements before beta:
 
