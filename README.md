@@ -14,6 +14,7 @@ Current codebase:
 - Go API profile endpoints under `apps/api`
 - Go API location proof validation primitives under `apps/api`
 - Go API server primitives and auth boundary packages under `apps/api`
+- baseline OpenAPI contract under `packages/openapi`
 - monorepo skeleton under `apps/`, `packages/`, and `infra/`
 - React/Vite placeholder shells under `apps/admin-web` and `apps/public-web`
 - product/technical planning docs
@@ -36,6 +37,10 @@ make verify
 ```
 
 Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, scaffold-aware Go, TypeScript, OpenAPI, and Swift gates, Go migration unit tests, and embedded PGlite/PostGIS up/down SQL execution. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API. The live Postgres/PostGIS migrate-up integration test also runs when `ECHOTRAILS_TEST_DATABASE_URL` and `psql` are available.
+
+## API contract
+
+The baseline OpenAPI contract lives at `packages/openapi/openapi.yaml` and includes placeholder health, auth, place, and Echo operations. `make verify` runs `npm run lint` in `packages/openapi`, which validates the contract with a dependency-free lint script.
 
 ## Target monorepo layout
 

@@ -36,7 +36,7 @@ Each target app, package, and infra directory has a placeholder README so follow
 ## Core stack decisions
 
 - API: Go REST/JSON.
-- API contract: OpenAPI, generated/checked clients for Swift and TypeScript.
+- API contract: `packages/openapi/openapi.yaml`, generated/checked clients for Swift and TypeScript.
 - Database: Postgres + PostGIS.
 - Search: Postgres full-text first.
 - Queue: Redis queue.
@@ -139,6 +139,8 @@ Shared API primitives live under `apps/api/internal/primitives` and establish th
 - Opaque cursor encoding/decoding using timestamp plus UUID tie-breaker.
 - Idempotency key replay semantics with request fingerprint protection.
 - Structured JSON error envelopes shaped as `{ "error": { "code", "title", "detail", "meta" } }`.
+
+The baseline machine-readable contract lives in `packages/openapi/openapi.yaml`. It starts with placeholder health, auth, place, and Echo paths and is validated by `packages/openapi/scripts/lint-openapi.py` through `npm run lint` as part of `make verify`.
 
 Initial resource groups:
 

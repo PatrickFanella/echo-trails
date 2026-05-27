@@ -1,5 +1,12 @@
-# EchoTrails OpenAPI Contract
+# EchoTrails OpenAPI contract
 
-Target location for the API contract and generated client checks.
+`openapi.yaml` is the baseline machine-readable API contract for Go, Swift, and TypeScript integration work and the target location for generated client checks.
 
-The initial `openapi.yaml` is a skeleton so repo verification can recognize the contract package before endpoint schemas are added by focused API issues.
+During scaffold phase the file is JSON-compatible YAML and is validated with a dependency-free lint script:
+
+```bash
+cd packages/openapi
+npm run lint
+```
+
+The repository baseline `make verify` runs the same lint command whenever `packages/openapi/package.json` is present.
