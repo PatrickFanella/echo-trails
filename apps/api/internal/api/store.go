@@ -5,14 +5,14 @@ import (
 	"sync"
 )
 
-type Store struct {
+type PlacesStore struct {
 	mu         sync.RWMutex
 	places     map[string]Place
 	placeAlias map[string]string
 }
 
-func NewStore(initial []Place) *Store {
-	s := &Store{places: map[string]Place{}, placeAlias: map[string]string{}}
+func NewStore(initial []Place) *PlacesStore {
+	s := &PlacesStore{places: map[string]Place{}, placeAlias: map[string]string{}}
 	for _, p := range initial {
 		s.places[p.ID] = p
 		for _, aliasID := range p.AliasIDs {
@@ -36,7 +36,7 @@ func DefaultPlaces() []Place {
 	}
 }
 
-func (s *Store) Search(query string, includeRestricted bool) []Place {
+func (s *PlacesStore) Search(query string, includeRestricted bool) []Place {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	q := strings.ToLower(strings.TrimSpace(query))
@@ -72,7 +72,7 @@ func matchesPlace(p Place, q string) bool {
 	return false
 }
 
-func (s *Store) Get(id string) (Place, bool) {
+func (s *PlacesStore) Get(id string) (Place, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if targetID, ok := s.placeAlias[id]; ok {
@@ -82,7 +82,7 @@ func (s *Store) Get(id string) (Place, bool) {
 	return p, ok
 }
 
-func (s *Store) CreateRequest(req PlaceRequest) Place {
+func (s *PlacesStore) CreateRequest(req PlaceRequest) Place {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	id := "request-" + slug(req.Name)

@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-type Handler struct{ store *Store }
+type Handler struct{ store *PlacesStore }
 
-func NewHandler(store *Store) http.Handler { return &Handler{store: store} }
+func NewHandler(store *PlacesStore) http.Handler { return &Handler{store: store} }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
