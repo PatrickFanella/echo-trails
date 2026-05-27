@@ -31,6 +31,8 @@ Target layout:
     └── deploy/
 ```
 
+Each target app, package, and infra directory has a placeholder README so follow-up issues can add implementation in focused PRs. The repository-level generated `ios/` prototype remains reference-only; new iOS work targets `apps/ios/` unless an issue explicitly says otherwise.
+
 ## Core stack decisions
 
 - API: Go REST/JSON.
@@ -177,6 +179,8 @@ Current scoped location proof implementation target: `apps/api/internal/location
 The scoped Sign in with Apple server boundary lives under `apps/api/internal/auth/apple`. It defines the Apple identity verifier interface, a deterministic test verifier, identity-linking service semantics, and production config placeholders. Production Apple verification must read only the secret names `ECHOTRAILS_APPLE_TEAM_ID`, `ECHOTRAILS_APPLE_CLIENT_ID`, `ECHOTRAILS_APPLE_KEY_ID`, and `ECHOTRAILS_APPLE_PRIVATE_KEY`; no secret values or signing material belong in git.
 
 Current scoped implementation target: `apps/api` provides standard-library Go handlers for passwordless email auth and session refresh/logout; it is intentionally storage/provider-agnostic for later persistence swaps. The local dev email adapter is explicit opt-in only and production must configure a real provider before beta.
+
+Current scoped web implementation target: `apps/admin-web` and `apps/public-web` provide minimal React/Vite placeholders. Each app documents npm and pnpm install paths, and its TypeScript lint/build/test scripts skip with an explicit message until dependencies are installed in that app directory.
 
 ## Upload and publish flow
 

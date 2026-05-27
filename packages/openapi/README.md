@@ -1,6 +1,6 @@
 # EchoTrails OpenAPI contract
 
-`openapi.yaml` is the baseline machine-readable API contract for Go, Swift, and TypeScript integration work.
+`openapi.yaml` is the baseline machine-readable API contract for Go, Swift, and TypeScript integration work and the target location for generated client checks.
 
 During scaffold phase the file is JSON-compatible YAML and is validated with a dependency-free lint script:
 
