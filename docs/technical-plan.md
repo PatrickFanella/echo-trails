@@ -160,6 +160,8 @@ Initial resource groups:
 
 Every mutating mobile request should support idempotency keys.
 
+Current scoped implementation target: `apps/api` provides standard-library Go handlers for passwordless email auth and session refresh/logout; it is intentionally storage/provider-agnostic for later persistence swaps. The local dev email adapter is explicit opt-in only and production must configure a real provider before beta.
+
 ## Upload and publish flow
 
 1. Client selects/validates Place.
