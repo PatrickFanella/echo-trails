@@ -273,7 +273,7 @@ Blocking checks:
 - OpenAPI contract presence/lint checks when `packages/openapi` is scaffolded.
 - TypeScript lint, build, and tests when web app package manifests are scaffolded.
 - Swift/Xcode tests on macOS runners only; Linux runners skip Swift checks with an explicit message.
-- SQL migration checks once migration tooling is scaffolded.
+- SQL migration pairing/static checks plus embedded PGlite/PostGIS up/down execution when migration tooling is scaffolded; live Postgres/PostGIS migrate-up coverage when a throwaway database is supplied.
 
 Testing requirements before beta:
 
@@ -295,7 +295,7 @@ Testing requirements before beta:
 
 ### Phase 1: Domain/API foundation
 
-- Postgres migrations for users, places, Echoes, replies, media, moderation, auth.
+- Core Postgres/PostGIS migrations for users, profiles, sessions, devices, identities, consents, places, Echoes, replies, media, moderation, analytics, audit, jobs, and idempotency.
 - OpenAPI skeleton.
 - Auth flows.
 - Place search/request model.

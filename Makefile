@@ -8,12 +8,12 @@ IOS_PROJECT := apps/ios/EchoTrails.xcodeproj
 IOS_SCHEME := EchoTrails
 IOS_DESTINATION := platform=iOS Simulator,name=iPhone 16
 
-.PHONY: help verify fmt fmt-check lint test docs-check open-pilot-check secrets-check go-check ts-check openapi-check swift-check
+.PHONY: help verify fmt fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check go-check ts-check openapi-check swift-check
 
 help: ## Show commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-verify: fmt-check lint test docs-check open-pilot-check secrets-check openapi-check swift-check ## Run all checks
+verify: fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check openapi-check swift-check ## Run all checks
 
 fmt: ## Format files where repo tooling is available
 	@for app in $(GO_APPS); do \
@@ -75,6 +75,9 @@ test: ## Run deterministic tests available on this host
 			echo "skip TypeScript tests: $$app/package.json not present yet"; \
 		fi; \
 	done
+
+db-migration-check: ## Execute SQL migrations against embedded Postgres/PostGIS when scaffolded
+	@if [ -f apps/api/package.json ]; then cd apps/api && npm ci && npm run test:migrations; else echo 'skip DB migration check: apps/api/package.json not present yet'; fi
 
 docs-check: ## Verify required docs exist
 	@test -f README.md

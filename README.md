@@ -33,7 +33,7 @@ Planned beta:
 make verify
 ```
 
-Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, and scaffold-aware Go, TypeScript, OpenAPI, and Swift gates. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API.
+Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, scaffold-aware Go, TypeScript, OpenAPI, and Swift gates, Go migration unit tests, and embedded PGlite/PostGIS up/down SQL execution. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API. The live Postgres/PostGIS migrate-up integration test also runs when `ECHOTRAILS_TEST_DATABASE_URL` and `psql` are available.
 
 ## API domain primitives
 
@@ -73,6 +73,7 @@ The `/me` endpoints use the current auth boundary placeholder headers from local
 - Technical plan: `docs/technical-plan.md`
 - Open Pilot readiness: `docs/open-pilot.md`
 - Labels: `docs/labels.md`
+- Database migration runbook: `docs/runbooks/database-migrations.md`
 
 ## Open Pilot
 
