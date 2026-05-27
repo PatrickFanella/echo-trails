@@ -15,6 +15,7 @@ Current codebase:
 - Go API location proof validation primitives under `apps/api`
 - Go API server primitives and auth boundary packages under `apps/api`
 - monorepo skeleton under `apps/`, `packages/`, and `infra/`
+- React/Vite placeholder shells under `apps/admin-web` and `apps/public-web`
 - product/technical planning docs
 - Open Pilot-ready issue and PR templates
 
@@ -47,6 +48,29 @@ Linux verification currently checks repo structure, docs, Open Pilot templates, 
 - `packages/shared-contracts` — shared contract/schema artifacts once generated.
 - `infra/local` — local development infrastructure.
 - `infra/deploy` — secret-free deployment scaffolding and docs.
+
+## Web app placeholders
+
+The admin and public web shells live in separate React/Vite app directories:
+
+- `apps/admin-web` — future moderation and operations UI
+- `apps/public-web` — future share preview, legal, and CTA pages
+
+Install dependencies from the app directory with either npm or pnpm:
+
+```bash
+cd apps/admin-web
+npm install
+npm run dev
+```
+
+```bash
+cd apps/public-web
+pnpm install
+pnpm dev
+```
+
+Until an app's dependencies are installed, its `lint`, `build`, and `test` package scripts print an explicit skip message. This keeps root `make verify` deterministic for scaffold-only checkouts while still running TypeScript checks, Vite builds, and Vitest smoke tests after dependencies exist.
 
 ## API domain primitives
 

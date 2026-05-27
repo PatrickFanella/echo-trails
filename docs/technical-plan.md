@@ -178,6 +178,8 @@ The scoped Sign in with Apple server boundary lives under `apps/api/internal/aut
 
 Current scoped implementation target: `apps/api` provides standard-library Go handlers for passwordless email auth and session refresh/logout; it is intentionally storage/provider-agnostic for later persistence swaps. The local dev email adapter is explicit opt-in only and production must configure a real provider before beta.
 
+Current scoped web implementation target: `apps/admin-web` and `apps/public-web` provide minimal React/Vite placeholders. Each app documents npm and pnpm install paths, and its TypeScript lint/build/test scripts skip with an explicit message until dependencies are installed in that app directory.
+
 ## Upload and publish flow
 
 1. Client selects/validates Place.

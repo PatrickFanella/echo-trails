@@ -1,0 +1,24 @@
+{
+  "name": "@echotrails/admin-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "lint": "node ./scripts/run-if-deps.mjs tsc --noEmit",
+    "build": "node ./scripts/run-if-deps.mjs vite build",
+    "test": "node ./scripts/run-if-deps.mjs vitest"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "latest",
+    "typescript": "latest",
+    "vitest": "latest",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest"
+  }
+}
