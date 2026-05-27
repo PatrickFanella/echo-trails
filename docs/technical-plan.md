@@ -31,6 +31,8 @@ Target layout:
     └── deploy/
 ```
 
+Each target app, package, and infra directory has a placeholder README so follow-up issues can add implementation in focused PRs. The repository-level generated `ios/` prototype remains reference-only; new iOS work targets `apps/ios/` unless an issue explicitly says otherwise.
+
 ## Core stack decisions
 
 - API: Go REST/JSON.
