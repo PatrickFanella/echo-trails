@@ -7,13 +7,14 @@ OPENAPI_DIR := packages/openapi
 IOS_PROJECT := apps/ios/EchoTrails.xcodeproj
 IOS_SCHEME := EchoTrails
 IOS_DESTINATION := platform=iOS Simulator,name=iPhone 16
+LOCAL_COMPOSE := infra/local/compose.yaml
 
-.PHONY: help verify fmt fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check go-check ts-check openapi-check swift-check
+.PHONY: help verify fmt fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check local-compose-check go-check ts-check openapi-check swift-check
 
 help: ## Show commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-verify: fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check openapi-check swift-check ## Run all checks
+verify: fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check local-compose-check openapi-check swift-check ## Run all checks
 
 fmt: ## Format files where repo tooling is available
 	@for app in $(GO_APPS); do \
@@ -113,6 +114,19 @@ secrets-check: ## Check for common committed secret filenames
 		! git ls-files | grep -E '(^|/)(\.env|.*\.pem|.*\.key|.*\.p12|.*\.pfx|id_rsa|id_ed25519)$$'; \
 	else \
 		echo 'skip secrets-check: not a git repository'; \
+	fi
+
+local-compose-check: ## Validate local development compose config when scaffolded
+	@if [ -f "$(LOCAL_COMPOSE)" ]; then \
+		if command -v docker >/dev/null 2>&1 && docker compose version >/dev/null 2>&1; then \
+			docker compose -f "$(LOCAL_COMPOSE)" config >/dev/null; \
+		elif command -v docker-compose >/dev/null 2>&1; then \
+			docker-compose -f "$(LOCAL_COMPOSE)" config >/dev/null; \
+		else \
+			python3 infra/local/validate-compose.py "$(LOCAL_COMPOSE)"; \
+		fi; \
+	else \
+		echo 'skip local compose check: infra/local/compose.yaml not present yet'; \
 	fi
 
 go-check: ## Run Go formatting, vet, and tests when Go modules are scaffolded

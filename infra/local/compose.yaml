@@ -1,0 +1,63 @@
+name: echotrails-local
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: echotrails_dev
+      POSTGRES_USER: echotrails
+      POSTGRES_PASSWORD: echotrails_dev_password
+    ports:
+      - "${ECHOTRAILS_LOCAL_POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U echotrails -d echotrails_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${ECHOTRAILS_LOCAL_REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
+  object-storage:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: echotrails
+      MINIO_ROOT_PASSWORD: echotrails_dev_password
+    ports:
+      - "${ECHOTRAILS_LOCAL_S3_PORT:-9000}:9000"
+      - "${ECHOTRAILS_LOCAL_S3_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - object-storage-data:/data
+
+  object-storage-init:
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      - object-storage
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        until mc alias set local http://object-storage:9000 echotrails echotrails_dev_password; do sleep 2; done
+        && mc mb --ignore-existing local/echotrails-dev
+        && mc anonymous set none local/echotrails-dev
+
+volumes:
+  postgres-data:
+  redis-data:
+  object-storage-data:
