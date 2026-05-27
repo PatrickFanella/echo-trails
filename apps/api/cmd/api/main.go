@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"os"
 
-	"echotrails/internal/api"
+	"git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/api"
 )
 
 func main() {
