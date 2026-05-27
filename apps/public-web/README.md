@@ -1,6 +1,8 @@
 # EchoTrails Public Web
 
-React/Vite placeholder for future public share previews, legal pages, and calls to action.
+Target location for the minimal React/Vite public web app.
+
+This app will provide share previews, legal pages, and public calls to action without becoming the primary EchoTrails client.
 
 ## Install and run
 

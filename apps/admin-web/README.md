@@ -1,6 +1,8 @@
 # EchoTrails Admin Web
 
-React/Vite placeholder for future EchoTrails moderation and operations workflows.
+Target location for the React/Vite admin web app and placeholder for future EchoTrails moderation and operations workflows.
+
+This app will support moderation, reports, places, users, audit review, and operational workflows for the beta product.
 
 ## Install and run
 
