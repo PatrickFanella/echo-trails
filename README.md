@@ -14,6 +14,7 @@ Current codebase:
 - Go API profile endpoints under `apps/api`
 - Go API location proof validation primitives under `apps/api`
 - Go API server primitives and auth boundary packages under `apps/api`
+- React/Vite placeholder shells under `apps/admin-web` and `apps/public-web`
 - product/technical planning docs
 - Open Pilot-ready issue and PR templates
 
@@ -34,6 +35,29 @@ make verify
 ```
 
 Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, scaffold-aware Go, TypeScript, OpenAPI, and Swift gates, Go migration unit tests, and embedded PGlite/PostGIS up/down SQL execution. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API. The live Postgres/PostGIS migrate-up integration test also runs when `ECHOTRAILS_TEST_DATABASE_URL` and `psql` are available.
+
+## Web app placeholders
+
+The admin and public web shells live in separate React/Vite app directories:
+
+- `apps/admin-web` — future moderation and operations UI
+- `apps/public-web` — future share preview, legal, and CTA pages
+
+Install dependencies from the app directory with either npm or pnpm:
+
+```bash
+cd apps/admin-web
+npm install
+npm run dev
+```
+
+```bash
+cd apps/public-web
+pnpm install
+pnpm dev
+```
+
+Until an app's dependencies are installed, its `lint`, `build`, and `test` package scripts print an explicit skip message. This keeps root `make verify` deterministic for scaffold-only checkouts while still running TypeScript checks, Vite builds, and Vitest smoke tests after dependencies exist.
 
 ## API domain primitives
 
