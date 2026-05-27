@@ -1,28 +1,80 @@
 SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 
-.PHONY: help verify fmt lint test docs-check open-pilot-check secrets-check xcode-note
+GO_APPS := apps/api apps/worker
+TS_APPS := apps/admin-web apps/public-web
+OPENAPI_DIR := packages/openapi
+IOS_PROJECT := apps/ios/EchoTrails.xcodeproj
+IOS_SCHEME := EchoTrails
+IOS_DESTINATION := platform=iOS Simulator,name=iPhone 16
+
+.PHONY: help verify fmt fmt-check lint test docs-check open-pilot-check secrets-check go-check ts-check openapi-check swift-check
 
 help: ## Show commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-verify: fmt lint test docs-check open-pilot-check secrets-check xcode-note ## Run all checks
+verify: fmt-check lint test docs-check open-pilot-check secrets-check openapi-check swift-check ## Run all checks
 
 fmt: ## Format files where repo tooling is available
-	@if [ -d apps/api ]; then cd apps/api && gofmt -w $$(find . -name '*.go' -type f); else echo 'skip gofmt: apps/api/ not present yet'; fi
-	@if [ -d apps/worker ]; then cd apps/worker && gofmt -w $$(find . -name '*.go' -type f); else echo 'skip gofmt: apps/worker/ not present yet'; fi
+	@for app in $(GO_APPS); do \
+		if [ -f "$$app/go.mod" ]; then \
+			files=$$(find "$$app" -name '*.go' -type f); \
+			if [ -n "$$files" ]; then gofmt -w $$files; else echo "skip gofmt: $$app has no Go files"; fi; \
+		else \
+			echo "skip gofmt: $$app/go.mod not present yet"; \
+		fi; \
+	done
+
+fmt-check: ## Verify formatting without rewriting files
+	@for app in $(GO_APPS); do \
+		if [ -f "$$app/go.mod" ]; then \
+			files=$$(find "$$app" -name '*.go' -type f); \
+			if [ -n "$$files" ]; then \
+				unformatted=$$(gofmt -l $$files); \
+				if [ -n "$$unformatted" ]; then printf '%s\n' "$$unformatted"; exit 1; fi; \
+			else \
+				echo "skip gofmt check: $$app has no Go files"; \
+			fi; \
+		else \
+			echo "skip gofmt check: $$app/go.mod not present yet"; \
+		fi; \
+	done
 
 lint: ## Run lightweight lint checks
-	@if [ -d apps/api ]; then cd apps/api && go vet ./...; else echo 'skip go vet: apps/api/ not present yet'; fi
-	@if [ -d apps/worker ]; then cd apps/worker && go vet ./...; else echo 'skip go vet: apps/worker/ not present yet'; fi
-	@if [ -d apps/admin-web ]; then cd apps/admin-web && npm run lint; else echo 'skip admin-web lint: apps/admin-web/ not present yet'; fi
-	@if [ -d apps/public-web ]; then cd apps/public-web && npm run lint; else echo 'skip public-web lint: apps/public-web/ not present yet'; fi
+	@for app in $(GO_APPS); do \
+		if [ -f "$$app/go.mod" ]; then \
+			echo "go vet: $$app"; \
+			(cd "$$app" && go vet ./...); \
+		else \
+			echo "skip go vet: $$app/go.mod not present yet"; \
+		fi; \
+	done
+	@for app in $(TS_APPS); do \
+		if [ -f "$$app/package.json" ]; then \
+			echo "TypeScript lint/build: $$app"; \
+			(cd "$$app" && npm run lint && npm run build); \
+		else \
+			echo "skip TypeScript lint/build: $$app/package.json not present yet"; \
+		fi; \
+	done
 
 test: ## Run deterministic tests available on this host
-	@if [ -d apps/api ]; then cd apps/api && go test ./...; else echo 'skip go test: apps/api/ not present yet'; fi
-	@if [ -d apps/worker ]; then cd apps/worker && go test ./...; else echo 'skip go test: apps/worker/ not present yet'; fi
-	@if [ -d apps/admin-web ]; then cd apps/admin-web && npm test -- --run; else echo 'skip admin-web tests: apps/admin-web/ not present yet'; fi
-	@if [ -d apps/public-web ]; then cd apps/public-web && npm test -- --run; else echo 'skip public-web tests: apps/public-web/ not present yet'; fi
+	@for app in $(GO_APPS); do \
+		if [ -f "$$app/go.mod" ]; then \
+			echo "go test: $$app"; \
+			(cd "$$app" && go test ./...); \
+		else \
+			echo "skip go test: $$app/go.mod not present yet"; \
+		fi; \
+	done
+	@for app in $(TS_APPS); do \
+		if [ -f "$$app/package.json" ]; then \
+			echo "TypeScript test: $$app"; \
+			(cd "$$app" && npm test -- --run); \
+		else \
+			echo "skip TypeScript tests: $$app/package.json not present yet"; \
+		fi; \
+	done
 
 docs-check: ## Verify required docs exist
 	@test -f README.md
@@ -43,6 +95,7 @@ open-pilot-check: ## Verify Open Pilot templates exist
 	@grep -q 'Test Command' .gitea/ISSUE_TEMPLATE/open-pilot-task.yaml
 	@test -f .gitea/PULL_REQUEST_TEMPLATE.md
 	@test -f .gitea/workflows/template-check.yml
+	@grep -q 'make verify' .gitea/workflows/template-check.yml
 
 secrets-check: ## Check for common committed secret filenames
 	@if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then \
@@ -51,5 +104,52 @@ secrets-check: ## Check for common committed secret filenames
 		echo 'skip secrets-check: not a git repository'; \
 	fi
 
-xcode-note: ## Explain iOS verification status on non-macOS runners
-	@echo 'iOS/Xcode tests are not part of Linux make verify yet; add xcodebuild checks when macOS runner is available.'
+go-check: ## Run Go formatting, vet, and tests when Go modules are scaffolded
+	@for app in $(GO_APPS); do \
+		if [ -f "$$app/go.mod" ]; then \
+			files=$$(find "$$app" -name '*.go' -type f); \
+			if [ -n "$$files" ]; then \
+				unformatted=$$(gofmt -l $$files); \
+				if [ -n "$$unformatted" ]; then printf '%s\n' "$$unformatted"; exit 1; fi; \
+			fi; \
+			echo "go check: $$app"; \
+			(cd "$$app" && go vet ./... && go test ./...); \
+		else \
+			echo "skip Go checks: $$app/go.mod not present yet"; \
+		fi; \
+	done
+
+ts-check: ## Run TypeScript/web checks when package.json files are scaffolded
+	@for app in $(TS_APPS); do \
+		if [ -f "$$app/package.json" ]; then \
+			echo "TypeScript check: $$app"; \
+			(cd "$$app" && npm run lint && npm run build && npm test -- --run); \
+		else \
+			echo "skip TypeScript checks: $$app/package.json not present yet"; \
+		fi; \
+	done
+
+openapi-check: ## Run OpenAPI checks when the contract package is scaffolded
+	@if [ -d "$(OPENAPI_DIR)" ]; then \
+		if [ ! -f "$(OPENAPI_DIR)/openapi.yaml" ] && [ ! -f "$(OPENAPI_DIR)/openapi.yml" ]; then \
+			echo 'OpenAPI package exists but no openapi.yaml or openapi.yml was found'; exit 1; \
+		fi; \
+		if [ -f "$(OPENAPI_DIR)/package.json" ]; then \
+			cd "$(OPENAPI_DIR)" && npm run lint; \
+		else \
+			echo 'OpenAPI contract present; skip npm lint because package.json is not present yet'; \
+		fi; \
+	else \
+		echo 'skip OpenAPI checks: packages/openapi/ not present yet'; \
+	fi
+
+swift-check: ## Run Swift/Xcode checks on macOS and skip safely elsewhere
+	@if [ "$$(uname -s)" = "Darwin" ]; then \
+		if [ -d "$(IOS_PROJECT)" ]; then \
+			xcodebuild test -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)"; \
+		else \
+			echo 'skip Swift checks: iOS project not present yet'; \
+		fi; \
+	else \
+		echo 'skip Swift/Xcode checks: non-macOS runner'; \
+	fi
