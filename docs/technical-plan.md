@@ -168,6 +168,8 @@ Initial resource groups:
 
 Every mutating mobile request should support idempotency keys.
 
+The scoped Sign in with Apple server boundary lives under `apps/api/internal/auth/apple`. It defines the Apple identity verifier interface, a deterministic test verifier, identity-linking service semantics, and production config placeholders. Production Apple verification must read only the secret names `ECHOTRAILS_APPLE_TEAM_ID`, `ECHOTRAILS_APPLE_CLIENT_ID`, `ECHOTRAILS_APPLE_KEY_ID`, and `ECHOTRAILS_APPLE_PRIVATE_KEY`; no secret values or signing material belong in git.
+
 Current scoped implementation target: `apps/api` provides standard-library Go handlers for passwordless email auth and session refresh/logout; it is intentionally storage/provider-agnostic for later persistence swaps. The local dev email adapter is explicit opt-in only and production must configure a real provider before beta.
 
 ## Upload and publish flow
