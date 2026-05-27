@@ -16,6 +16,7 @@ infra/local/data/
 import XCTest
 
 node_modules/
+dist/
 
 
 final class EchoTrailsUITests: XCTestCase {

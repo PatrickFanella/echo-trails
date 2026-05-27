@@ -1,0 +1,8 @@
+{
+  "name": "@echotrails/openapi",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "python3 scripts/lint-openapi.py openapi.yaml"
+  }
+}

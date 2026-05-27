@@ -1,4 +1,4 @@
-# Local development services
+# EchoTrails Local Infrastructure
 
 `infra/local/compose.yaml` starts disposable local dependencies for development:
 
