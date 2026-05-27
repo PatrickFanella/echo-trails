@@ -18,8 +18,15 @@ func main() {
 	}
 
 	server := api.NewServer(api.Config{Sender: api.DevEmailSender{Log: log.Printf}})
+	places := api.NewHandler(api.NewStore(api.DefaultPlaces()))
+	mux := http.NewServeMux()
+	mux.Handle("/places/search", places)
+	mux.Handle("/places/requests", places)
+	mux.Handle("/places/", places)
+	mux.Handle("/", server.Router())
+
 	log.Printf("starting echotrails api on %s", addr)
-	if err := http.ListenAndServe(addr, server.Router()); err != nil {
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }
