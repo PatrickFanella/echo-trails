@@ -245,6 +245,8 @@ Environments:
 - staging
 - prod-beta
 
+Local development dependencies are scaffolded in `infra/local/compose.yaml` for disposable Postgres/PostGIS, Redis, and MinIO S3-compatible object storage. The checked-in compose values are non-secret development defaults only and must not be reused for staging or production. Local `.env` files, production credentials, signing material, and object-storage keys must stay out of git.
+
 Backups before beta testers:
 
 - Postgres PITR/daily backup.
@@ -269,6 +271,7 @@ Blocking checks:
 
 - `make verify` is the local and CI baseline gate.
 - Required docs, Open Pilot templates, and common committed secret filenames.
+- Local Docker Compose config validation for Postgres/PostGIS, Redis, and object storage, with a lightweight Linux-safe fallback when Docker is unavailable.
 - Go formatting, vet, and tests when `apps/api` or `apps/worker` modules are scaffolded.
 - OpenAPI contract presence/lint checks when `packages/openapi` is scaffolded.
 - TypeScript lint, build, and tests when web app package manifests are scaffolded.

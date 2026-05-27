@@ -33,7 +33,18 @@ Planned beta:
 make verify
 ```
 
-Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, scaffold-aware Go, TypeScript, OpenAPI, and Swift gates, Go migration unit tests, and embedded PGlite/PostGIS up/down SQL execution. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API. The live Postgres/PostGIS migrate-up integration test also runs when `ECHOTRAILS_TEST_DATABASE_URL` and `psql` are available.
+Linux verification currently checks repo structure, docs, Open Pilot templates, committed secret filenames, local compose config, scaffold-aware Go, TypeScript, OpenAPI, and Swift gates, Go migration unit tests, and embedded PGlite/PostGIS up/down SQL execution. Missing implementation scaffolds are skipped with explicit messages; Swift/Xcode checks run only on macOS. With `apps/api` present, verification runs Go fmt/vet/tests for the API. The live Postgres/PostGIS migrate-up integration test also runs when `ECHOTRAILS_TEST_DATABASE_URL` and `psql` are available.
+
+## Local development services
+
+Local Postgres/PostGIS, Redis, and S3-compatible object storage are defined in `infra/local/compose.yaml`:
+
+```bash
+docker compose -f infra/local/compose.yaml up -d
+docker compose -f infra/local/compose.yaml down
+```
+
+The compose file uses non-secret development defaults only. Do not commit `.env` files, production credentials, signing keys, or staging/prod object-storage access keys. See `infra/local/README.md` for ports and connection strings.
 
 ## API domain primitives
 
@@ -74,6 +85,7 @@ The `/me` endpoints use the current auth boundary placeholder headers from local
 - Open Pilot readiness: `docs/open-pilot.md`
 - Labels: `docs/labels.md`
 - Database migration runbook: `docs/runbooks/database-migrations.md`
+- Local development services: `infra/local/README.md`
 
 ## Open Pilot
 
