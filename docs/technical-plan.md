@@ -362,6 +362,13 @@ Current scoped iOS implementation target for #13 is a Swift Package shell under
 and Phase 3 tab names only. No auth, SwiftData, networking, map UI, or media UI
 is included in the shell.
 
+Current scoped implementation target for #34 keeps Phase 3 Linux-verifiable by
+hardening the Swift Package baseline rather than requiring an Xcode project. It
+adds pure Swift app bootstrap, local/staging/production environment selection,
+API client configuration seams, and navigation descriptors. Runtime auth,
+Keychain, SwiftData, networking, MapKit, media composer UI, and Xcode-only smoke
+tests start in later Phase 3 issues.
+
 ### Phase 3: iOS clean rebuild
 
 - New SwiftUI project.

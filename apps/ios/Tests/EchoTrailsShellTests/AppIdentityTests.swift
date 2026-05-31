@@ -12,5 +12,6 @@ final class AppIdentityTests: XCTestCase {
 
     func testShellTabsDeclarePhaseThreeNavigationShape() {
         XCTAssertEqual(ShellTabs.allCases.map(\.rawValue), ["map", "explore", "activity", "profile"])
+        XCTAssertEqual(ShellTabs.allCases.map(\.title), ["Map", "Explore", "Activity", "Profile"])
     }
 }

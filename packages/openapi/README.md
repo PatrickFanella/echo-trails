@@ -12,6 +12,6 @@ npm run check
 Generated files:
 
 - `packages/shared-contracts/src/openapi-paths.ts`
-- `apps/ios/Generated/OpenAPIPaths.swift`
+- `apps/ios/Sources/EchoTrailsShell/Generated/OpenAPIPaths.swift`
 
 The repository baseline `make verify` runs the same check whenever `packages/openapi/package.json` is present.
