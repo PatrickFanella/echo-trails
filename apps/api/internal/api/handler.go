@@ -2,14 +2,28 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
-type Handler struct{ store *PlacesStore }
+type Handler struct {
+	store *PlacesStore
+	media MediaUploadStore
+}
 
-func NewHandler(store *PlacesStore) http.Handler { return &Handler{store: store} }
+func NewHandler(store *PlacesStore) http.Handler {
+	return NewHandlerWithMedia(store, NewMemoryMediaUploadStore())
+}
+
+func NewHandlerWithMedia(store *PlacesStore, media MediaUploadStore) http.Handler {
+	if media == nil {
+		media = NewMemoryMediaUploadStore()
+	}
+	return &Handler{store: store, media: media}
+}
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch {
@@ -17,6 +31,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleSearch(w, r)
 	case r.Method == http.MethodPost && r.URL.Path == "/places/requests":
 		h.handleRequest(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/media/uploads":
+		h.handleCreateMediaUpload(w, r)
+	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/media/uploads/"):
+		h.handleGetMediaUpload(w, r)
+	case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/complete") && strings.HasPrefix(r.URL.Path, "/media/uploads/"):
+		h.handleCompleteMediaUpload(w, r)
 	case r.Method == http.MethodGet && r.URL.Path == "/discovery/nearby":
 		h.handleNearby(w, r)
 	case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/echoes") && strings.HasPrefix(r.URL.Path, "/places/"):
@@ -26,6 +46,48 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (h *Handler) handleCreateMediaUpload(w http.ResponseWriter, r *http.Request) {
+	var req CreateMediaUploadRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2048)).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "bad_request", "invalid media upload request")
+		return
+	}
+	created, err := h.media.CreateUpload(r.Context(), req, strings.TrimSpace(r.Header.Get("Idempotency-Key")), time.Now().UTC())
+	if err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, created)
+}
+
+func (h *Handler) handleGetMediaUpload(w http.ResponseWriter, r *http.Request) {
+	uploadID := strings.TrimPrefix(r.URL.Path, "/media/uploads/")
+	if strings.Contains(uploadID, "/") || uploadID == "" {
+		http.NotFound(w, r)
+		return
+	}
+	status, err := h.media.GetUpload(r.Context(), uploadID)
+	if err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, status)
+}
+
+func (h *Handler) handleCompleteMediaUpload(w http.ResponseWriter, r *http.Request) {
+	uploadID := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/media/uploads/"), "/complete")
+	if uploadID == "" {
+		http.NotFound(w, r)
+		return
+	}
+	status, err := h.media.CompleteUpload(r.Context(), uploadID)
+	if err != nil {
+		writeMediaError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, status)
 }
 
 func (h *Handler) handleNearby(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +166,19 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 
 func writeError(w http.ResponseWriter, status int, code, title string) {
 	writeJSON(w, status, map[string]any{"error": map[string]string{"code": code, "title": title}})
+}
+
+func writeMediaError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, ErrInvalidMediaUpload):
+		writeError(w, http.StatusBadRequest, "invalid_media_upload", "invalid media upload")
+	case errors.Is(err, ErrMediaUploadNotFound):
+		writeError(w, http.StatusNotFound, "media_upload_not_found", "media upload not found")
+	case errors.Is(err, ErrMediaUploadExpired):
+		writeError(w, http.StatusBadRequest, "media_upload_expired", "media upload expired")
+	default:
+		writeError(w, http.StatusInternalServerError, "internal_error", "internal server error")
+	}
 }
 
 func parseInt(value string, fallback int) int {

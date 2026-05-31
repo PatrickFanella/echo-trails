@@ -28,6 +28,8 @@ func main() {
 	mux.HandleFunc("/metrics", obs.HandleMetrics)
 	mux.Handle("/places/search", places)
 	mux.Handle("/discovery/nearby", places)
+	mux.Handle("/media/uploads", places)
+	mux.Handle("/media/uploads/", places)
 	mux.Handle("/places/requests", places)
 	mux.Handle("/places/", places)
 	mux.Handle("/", server.Router())

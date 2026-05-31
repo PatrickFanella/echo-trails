@@ -16,7 +16,8 @@
     {"name": "health"},
     {"name": "auth"},
     {"name": "places"},
-    {"name": "echoes"}
+    {"name": "echoes"},
+    {"name": "media"}
   ],
   "paths": {
     "/health": {
@@ -332,6 +333,47 @@
           "404": {"$ref": "#/components/responses/ErrorResponse"}
         }
       }
+    },
+    "/media/uploads": {
+      "post": {
+        "tags": ["media"],
+        "operationId": "createMediaUpload",
+        "summary": "Create a presigned direct media upload",
+        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateMediaUploadRequest"}}}
+        },
+        "responses": {
+          "201": {"description": "Upload target created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "400": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
+    "/media/uploads/{uploadId}": {
+      "get": {
+        "tags": ["media"],
+        "operationId": "getMediaUpload",
+        "summary": "Get media upload status",
+        "parameters": [{"$ref": "#/components/parameters/UploadId"}],
+        "responses": {
+          "200": {"description": "Upload status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "404": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
+    "/media/uploads/{uploadId}/complete": {
+      "post": {
+        "tags": ["media"],
+        "operationId": "completeMediaUpload",
+        "summary": "Complete a presigned direct media upload",
+        "parameters": [{"$ref": "#/components/parameters/UploadId"}],
+        "responses": {
+          "200": {"description": "Upload completed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "400": {"$ref": "#/components/responses/ErrorResponse"},
+          "404": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
     }
   },
   "components": {
@@ -344,7 +386,8 @@
       "Longitude": {"name": "lon", "in": "query", "required": true, "schema": {"type": "number", "minimum": -180, "maximum": 180}},
       "PlaceId": {"name": "placeId", "in": "path", "required": true, "schema": {"type": "string"}},
       "RadiusMeters": {"name": "radius_meters", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 10, "maximum": 10000, "default": 1000}},
-      "SearchQuery": {"name": "q", "in": "query", "required": false, "schema": {"type": "string"}}
+      "SearchQuery": {"name": "q", "in": "query", "required": false, "schema": {"type": "string"}},
+      "UploadId": {"name": "uploadId", "in": "path", "required": true, "schema": {"type": "string"}}
     },
     "responses": {
       "AuthTokenResponse": {
@@ -390,6 +433,16 @@
           "title": {"type": "string", "minLength": 1, "maxLength": 80},
           "body": {"type": "string", "minLength": 1, "maxLength": 500},
           "creation_token": {"type": "string"}
+        }
+      },
+      "CreateMediaUploadRequest": {
+        "type": "object",
+        "required": ["echo_id", "media_type", "content_type", "byte_size"],
+        "properties": {
+          "echo_id": {"type": "string"},
+          "media_type": {"type": "string", "enum": ["image", "audio", "video"]},
+          "content_type": {"type": "string", "enum": ["image/jpeg", "image/png", "image/heic", "audio/mpeg", "audio/mp4", "audio/wav", "video/mp4", "video/quicktime"]},
+          "byte_size": {"type": "integer", "minimum": 1, "maximum": 104857600}
         }
       },
       "Echo": {
@@ -467,6 +520,19 @@
           "provider_mappings": {"type": "array", "items": {"$ref": "#/components/schemas/ProviderMapping"}},
           "canonical_id": {"type": "string"},
           "replacement_id": {"type": "string"}
+        }
+      },
+      "MediaUploadResponse": {
+        "type": "object",
+        "required": ["upload_id", "media_asset_id", "method", "object_key", "status", "expires_at"],
+        "properties": {
+          "upload_id": {"type": "string"},
+          "media_asset_id": {"type": "string"},
+          "upload_url": {"type": "string", "description": "Present only while upload is active."},
+          "method": {"type": "string", "enum": ["PUT"]},
+          "object_key": {"type": "string"},
+          "status": {"type": "string", "enum": ["created", "uploaded", "expired", "failed"]},
+          "expires_at": {"type": "string", "format": "date-time"}
         }
       },
       "PlaceRequest": {
