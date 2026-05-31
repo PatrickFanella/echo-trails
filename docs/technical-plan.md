@@ -410,6 +410,15 @@ runtime networking until a macOS/Xcode-capable pass can verify those integration
 - Notifications.
 - Admin moderation app.
 
+Current scoped implementation target for #44-#48 is a Linux-verifiable in-memory
+API contract slice. It adds reaction totals with one reaction per user per Echo,
+text-only one-level replies, stitch records linking new Echo IDs to source Echoes,
+report/moderation intake records, viewer hides/user blocks that filter visible
+replies and notification eligibility, and stored activity-safe notification
+records. This does not add DB persistence, ranking, APNs delivery, abuse scoring,
+admin adjudication, Reply screenshot rendering, or iOS social UI; those remain
+separate Phase 4/5 implementation passes.
+
 ### Phase 5: Beta readiness
 
 - Invite codes.

@@ -108,6 +108,18 @@ func (s *PlacesStore) Echoes(placeID string, limit int) []EchoSummary {
 	return echoes
 }
 
+func (s *PlacesStore) EchoAuthors() map[string]string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	authors := map[string]string{}
+	for _, echoes := range s.echoes {
+		for _, echo := range echoes {
+			authors[echo.ID] = echo.AuthorID
+		}
+	}
+	return authors
+}
+
 func distanceMeters(lat1, lon1, lat2, lon2 float64) float64 {
 	const earthRadiusMeters = 6371000
 	dLat := (lat2 - lat1) * math.Pi / 180

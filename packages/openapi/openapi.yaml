@@ -17,7 +17,10 @@
     {"name": "auth"},
     {"name": "places"},
     {"name": "echoes"},
-    {"name": "media"}
+    {"name": "media"},
+    {"name": "social"},
+    {"name": "safety"},
+    {"name": "notifications"}
   ],
   "paths": {
     "/health": {
@@ -334,6 +337,29 @@
         }
       }
     },
+    "/echoes/{echoId}/reactions": {
+      "put": {"tags": ["social"], "operationId": "putEchoReaction", "summary": "Set one reaction per user for an Echo", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReactionRequest"}}}}, "responses": {"200": {"description": "Reaction totals", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReactionSummary"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}, "403": {"$ref": "#/components/responses/ErrorResponse"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}},
+      "get": {"tags": ["social"], "operationId": "getEchoReactions", "summary": "Get Echo reaction totals", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "responses": {"200": {"description": "Reaction totals", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReactionSummary"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/echoes/{echoId}/replies": {
+      "post": {"tags": ["social"], "operationId": "createEchoReply", "summary": "Create a text reply with one-level nesting", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReplyRequest"}}}}, "responses": {"201": {"description": "Reply created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Reply"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}, "403": {"$ref": "#/components/responses/ErrorResponse"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}},
+      "get": {"tags": ["social"], "operationId": "listEchoReplies", "summary": "List oldest-first visible replies", "parameters": [{"$ref": "#/components/parameters/EchoId"}, {"name": "viewer_id", "in": "query", "required": false, "schema": {"type": "string"}}], "responses": {"200": {"description": "Visible replies", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RepliesResponse"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/echoes/{echoId}/stitches": {
+      "post": {"tags": ["social"], "operationId": "createEchoStitch", "summary": "Create an Echo linked to a source Echo", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StitchRequest"}}}}, "responses": {"201": {"description": "Stitch created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Stitch"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}, "403": {"$ref": "#/components/responses/ErrorResponse"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/reports": {
+      "post": {"tags": ["safety"], "operationId": "createReport", "summary": "Create moderation intake report", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReportRequest"}}}}, "responses": {"201": {"description": "Report created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Report"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/hides": {
+      "post": {"tags": ["safety"], "operationId": "hideTarget", "summary": "Hide a target for a viewer", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisibilityRequest"}}}}, "responses": {"204": {"description": "Target hidden"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/blocks": {
+      "post": {"tags": ["safety"], "operationId": "blockUser", "summary": "Block a user and suppress their notifications", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisibilityRequest"}}}}, "responses": {"204": {"description": "User blocked"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/notifications": {
+      "get": {"tags": ["notifications"], "operationId": "listNotifications", "summary": "List stored activity-safe notification records", "parameters": [{"name": "user_id", "in": "query", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Notification records", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/NotificationsResponse"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
     "/media/uploads": {
       "post": {
         "tags": ["media"],
@@ -473,6 +499,18 @@
           "published_at": {"type": "string", "format": "date-time"}
         }
       },
+      "ReactionRequest": {"type": "object", "required": ["user_id", "kind"], "properties": {"user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["echo", "seen"]}}},
+      "ReactionSummary": {"type": "object", "required": ["echo_id", "totals"], "properties": {"echo_id": {"type": "string"}, "totals": {"type": "object", "additionalProperties": {"type": "integer"}}}},
+      "ReplyRequest": {"type": "object", "required": ["user_id", "body"], "properties": {"user_id": {"type": "string"}, "body": {"type": "string", "minLength": 1, "maxLength": 500}, "reply_to": {"type": "string"}}},
+      "Reply": {"type": "object", "required": ["id", "echo_id", "user_id", "body", "posted_at"], "properties": {"id": {"type": "string"}, "echo_id": {"type": "string"}, "user_id": {"type": "string"}, "body": {"type": "string"}, "reply_to": {"type": "string"}, "edited": {"type": "boolean"}, "hidden": {"type": "boolean"}, "posted_at": {"type": "string", "format": "date-time"}}},
+      "RepliesResponse": {"type": "object", "required": ["replies"], "properties": {"replies": {"type": "array", "items": {"$ref": "#/components/schemas/Reply"}}}},
+      "StitchRequest": {"type": "object", "required": ["user_id", "title", "body"], "properties": {"user_id": {"type": "string"}, "source_echo_id": {"type": "string", "description": "Ignored for /echoes/{echoId}/stitches; source comes from path."}, "title": {"type": "string", "minLength": 1, "maxLength": 80}, "body": {"type": "string", "minLength": 1, "maxLength": 2000}}},
+      "Stitch": {"type": "object", "required": ["id", "echo_id", "user_id", "source_echo_id", "title", "body", "created_at"], "properties": {"id": {"type": "string"}, "echo_id": {"type": "string"}, "user_id": {"type": "string"}, "source_echo_id": {"type": "string"}, "title": {"type": "string"}, "body": {"type": "string"}, "created_at": {"type": "string", "format": "date-time"}}},
+      "ReportRequest": {"type": "object", "required": ["reporter_id", "target_type", "target_id", "reason"], "properties": {"reporter_id": {"type": "string"}, "target_type": {"type": "string", "enum": ["echo", "reply", "user"]}, "target_id": {"type": "string"}, "reason": {"type": "string", "minLength": 1, "maxLength": 500}}},
+      "Report": {"type": "object", "required": ["id", "reporter_id", "target_type", "target_id", "reason", "status", "created_at"], "properties": {"id": {"type": "string"}, "reporter_id": {"type": "string"}, "target_type": {"type": "string"}, "target_id": {"type": "string"}, "reason": {"type": "string"}, "status": {"type": "string", "enum": ["pending_review"]}, "created_at": {"type": "string", "format": "date-time"}}},
+      "VisibilityRequest": {"type": "object", "required": ["user_id", "target_id"], "properties": {"user_id": {"type": "string"}, "target_id": {"type": "string"}}},
+      "Notification": {"type": "object", "required": ["id", "user_id", "kind", "actor_id", "target_id", "preview", "created_at"], "properties": {"id": {"type": "string"}, "user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["reaction", "reply", "stitch"]}, "actor_id": {"type": "string"}, "target_id": {"type": "string"}, "preview": {"type": "string"}, "created_at": {"type": "string", "format": "date-time"}}},
+      "NotificationsResponse": {"type": "object", "required": ["notifications"], "properties": {"notifications": {"type": "array", "items": {"$ref": "#/components/schemas/Notification"}}}},
       "EmailAuthStartRequest": {
         "type": "object",
         "required": ["email"],

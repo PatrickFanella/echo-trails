@@ -10,8 +10,9 @@ import (
 )
 
 type Handler struct {
-	store *PlacesStore
-	media MediaUploadStore
+	store  *PlacesStore
+	media  MediaUploadStore
+	social *SocialStore
 }
 
 func NewHandler(store *PlacesStore) http.Handler {
@@ -22,7 +23,11 @@ func NewHandlerWithMedia(store *PlacesStore, media MediaUploadStore) http.Handle
 	if media == nil {
 		media = NewMemoryMediaUploadStore()
 	}
-	return &Handler{store: store, media: media}
+	authors := map[string]string{}
+	if store != nil {
+		authors = store.EchoAuthors()
+	}
+	return &Handler{store: store, media: media, social: NewSocialStoreWithEchoAuthors(authors)}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -41,6 +46,20 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.handleNearby(w, r)
 	case r.Method == http.MethodGet && strings.HasSuffix(r.URL.Path, "/echoes") && strings.HasPrefix(r.URL.Path, "/places/"):
 		h.handlePlaceEchoes(w, r)
+	case strings.HasPrefix(r.URL.Path, "/echoes/") && strings.HasSuffix(r.URL.Path, "/reactions"):
+		h.handleEchoReactions(w, r)
+	case strings.HasPrefix(r.URL.Path, "/echoes/") && strings.HasSuffix(r.URL.Path, "/replies"):
+		h.handleEchoReplies(w, r)
+	case strings.HasPrefix(r.URL.Path, "/echoes/") && strings.HasSuffix(r.URL.Path, "/stitches"):
+		h.handleEchoStitch(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/reports":
+		h.handleCreateReport(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/hides":
+		h.handleHide(w, r)
+	case r.Method == http.MethodPost && r.URL.Path == "/blocks":
+		h.handleBlock(w, r)
+	case r.Method == http.MethodGet && r.URL.Path == "/notifications":
+		h.handleNotifications(w, r)
 	case r.Method == http.MethodGet && strings.HasPrefix(r.URL.Path, "/places/"):
 		h.handleDetail(w, r)
 	default:
