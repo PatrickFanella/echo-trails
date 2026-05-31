@@ -17,5 +17,13 @@ Current skeleton job types:
 - `generate_transcript`
 - `scan_media_safety`
 
-This is an in-memory contract only. Redis-backed reservation, media transforms,
-transcription engines, and moderation scanners are later work.
+The worker queue framework currently provides:
+
+- enqueue/reserve/succeed/fail contracts
+- idempotent enqueue by job key
+- retry backoff and dead-letter state
+- explicit Redis connection configuration validation
+
+The executable still uses the deterministic in-memory queue. Real Redis stream
+reservation, media transforms, transcription engines, and moderation scanners
+are later work.

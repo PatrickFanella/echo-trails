@@ -323,9 +323,23 @@ Testing requirements before beta:
 Phase 2A/B skeleton includes migration `apps/api/db/migrations/0002_media_lifecycle_spine.*.sql`
 for upload lifecycle, transcripts, and moderation reviews, plus a deterministic
 worker job skeleton under `apps/worker` for `process_media`,
-`generate_transcript`, and `scan_media_safety`. Real Redis reservation,
-presigned-object verification, transcription engines, media transforms, and
-moderation scanners remain later work.
+`generate_transcript`, and `scan_media_safety`.
+
+Current scoped implementation target for #28/#29 adds API-only direct upload
+handlers for `POST /media/uploads`, `GET /media/uploads/{uploadId}`, and
+`POST /media/uploads/{uploadId}/complete`. The handlers validate media type,
+content type, size, idempotency key replay, opaque object keys, and hide upload
+URLs after completion/expiry. Returned upload URLs are local-dev placeholders
+for MinIO, not production presigned URLs. The worker queue now has explicit enqueue,
+reserve, retry/backoff, dead-letter, and Redis connection configuration
+contracts. Real Redis reservation, presigned-object verification,
+transcription engines, media transforms, and moderation scanners remain later
+work.
+
+Current scoped iOS implementation target for #13 is a Swift Package shell under
+`apps/ios` with stable app identity constants, generated OpenAPI path constants,
+and Phase 3 tab names only. No auth, SwiftData, networking, map UI, or media UI
+is included in the shell.
 
 ### Phase 3: iOS clean rebuild
 

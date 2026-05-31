@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 const (
@@ -22,6 +23,7 @@ type Job struct {
 	IdempotencyKey string
 	Attempts       int
 	MaxAttempts    int
+	AvailableAt    time.Time
 }
 
 func New(id, jobType, assetID string) Job {
@@ -29,31 +31,69 @@ func New(id, jobType, assetID string) Job {
 }
 
 type Queue interface {
+	Enqueue(context.Context, Job) error
 	Reserve(context.Context) (Job, error)
 	Succeed(context.Context, Job) error
 	Fail(context.Context, Job, error) error
 }
+
+type Clock interface{ Now() time.Time }
+
+type SystemClock struct{}
+
+func (SystemClock) Now() time.Time { return time.Now().UTC() }
 
 type MemoryQueue struct {
 	mu        sync.Mutex
 	pending   []Job
 	succeeded []Job
 	failed    []Job
+	clock     Clock
+	seen      map[string]struct{}
 }
 
 func NewMemoryQueue(jobs []Job) *MemoryQueue {
-	return &MemoryQueue{pending: append([]Job(nil), jobs...)}
+	queue := &MemoryQueue{pending: append([]Job(nil), jobs...), clock: SystemClock{}, seen: map[string]struct{}{}}
+	for _, job := range jobs {
+		if job.IdempotencyKey != "" {
+			queue.seen[job.IdempotencyKey] = struct{}{}
+		}
+	}
+	return queue
+}
+
+func (q *MemoryQueue) Enqueue(_ context.Context, job Job) error {
+	if err := validateJob(job); err != nil {
+		return err
+	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.seen == nil {
+		q.seen = map[string]struct{}{}
+	}
+	if _, ok := q.seen[job.IdempotencyKey]; ok {
+		return nil
+	}
+	q.seen[job.IdempotencyKey] = struct{}{}
+	q.pending = append(q.pending, job)
+	return nil
 }
 
 func (q *MemoryQueue) Reserve(context.Context) (Job, error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	now := q.now()
+	for i, job := range q.pending {
+		if !job.AvailableAt.IsZero() && job.AvailableAt.After(now) {
+			continue
+		}
+		q.pending = append(q.pending[:i], q.pending[i+1:]...)
+		return job, nil
+	}
 	if len(q.pending) == 0 {
 		return Job{}, ErrNoJobs
 	}
-	job := q.pending[0]
-	q.pending = q.pending[1:]
-	return job, nil
+	return Job{}, ErrNoJobs
 }
 
 func (q *MemoryQueue) Succeed(_ context.Context, job Job) error {
@@ -68,6 +108,7 @@ func (q *MemoryQueue) Fail(_ context.Context, job Job, _ error) error {
 	defer q.mu.Unlock()
 	job.Attempts++
 	if job.Attempts < job.MaxAttempts {
+		job.AvailableAt = q.now().Add(backoff(job.Attempts))
 		q.pending = append(q.pending, job)
 		return nil
 	}
@@ -75,10 +116,50 @@ func (q *MemoryQueue) Fail(_ context.Context, job Job, _ error) error {
 	return nil
 }
 
+func (q *MemoryQueue) FailedCount() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.failed)
+}
+
+func (q *MemoryQueue) PendingCount() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return len(q.pending)
+}
+
+func (q *MemoryQueue) now() time.Time {
+	if q.clock == nil {
+		return time.Now().UTC()
+	}
+	return q.clock.Now()
+}
+
 func (q *MemoryQueue) SucceededCount() int {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	return len(q.succeeded)
+}
+
+func backoff(attempts int) time.Duration {
+	if attempts <= 0 {
+		return time.Second
+	}
+	if attempts > 5 {
+		attempts = 5
+	}
+	return time.Duration(1<<uint(attempts-1)) * time.Second
+}
+
+type RedisConfig struct {
+	URL        string
+	StreamName string
+	GroupName  string
+	Consumer   string
+}
+
+func (c RedisConfig) Valid() bool {
+	return c.URL != "" && c.StreamName != "" && c.GroupName != "" && c.Consumer != ""
 }
 
 type Processor struct {
