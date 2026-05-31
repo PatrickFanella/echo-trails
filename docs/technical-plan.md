@@ -425,6 +425,13 @@ navigation, moderation queue/action-intent placeholders, and Places review
 placeholders for boundary-sensitive overrides. It does not add real auth, API
 writes, DB persistence, sanctions, appeals, or production moderation decisions.
 
+Current scoped implementation target for #52 is a Linux-verifiable iOS social UI
+contract layer in `apps/ios`. It adds pure Swift descriptors for reaction bars,
+reply composers/threads, stitch source cards, report flows, hide/block actions,
+and authenticated action metadata. It does not add SwiftUI/UIKit views, runtime
+networking, SwiftData persistence, screenshot rendering, APNs, or production
+moderation decisions.
+
 ### Phase 5: Beta readiness
 
 - Invite codes.

@@ -18,6 +18,7 @@ Current scope is a Swift Package shell only:
 - Linux-safe boundary checks that forbid SwiftUI/MapKit/SwiftData/AuthServices/Security imports until Xcode-scoped issues
 - auth/session contract descriptors for email code, Apple Sign-In exchange, token redaction, and Keychain-ready storage seams
 - Phase 3 contract descriptors for Map, Explore, create flow, SwiftData-ready cache/outbox schema, media composer, Profile/Activity, and accessibility audit surfaces
+- Phase 4 social interaction descriptors for reactions, replies, stitches, reports, blocks, hides, and authenticated action metadata
 
 No runtime auth UI, Keychain storage implementation, SwiftData, runtime networking, MapKit UI, media composer, or upload UI belongs in this baseline issue.
 
@@ -27,6 +28,9 @@ frameworks or touching the generated prototype under repository-level `ios/`.
 Auth contracts are data-only: they reference email/Apple/session endpoints,
 redact token previews, and describe Keychain-ready storage without importing
 AuthenticationServices or Security.
+Social contracts are data-only: they reference Phase 4 API paths and validation
+rules for eventual UI without rendering SwiftUI/UIKit views or mutating network
+state.
 
 Verification:
 

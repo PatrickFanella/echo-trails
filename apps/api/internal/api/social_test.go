@@ -11,11 +11,11 @@ import (
 
 func TestReactionsKeepOneTotalPerUser(t *testing.T) {
 	h := NewHandler(NewStore(DefaultPlaces()))
-	putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"user-a","kind":"echo"}`, http.StatusOK)
-	response := putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"user-a","kind":"seen"}`, http.StatusOK)
+	putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"user-a","kind":"heart"}`, http.StatusOK)
+	response := putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"user-a","kind":"clap"}`, http.StatusOK)
 	var summary ReactionSummary
 	decodeRecorderJSON(t, response, &summary)
-	if summary.Totals[ReactionKindEcho] != 0 || summary.Totals[ReactionKindSeen] != 1 {
+	if summary.Totals[ReactionKindHeart] != 0 || summary.Totals[ReactionKindClap] != 1 {
 		t.Fatalf("bad reaction summary: %+v", summary)
 	}
 }
@@ -58,7 +58,7 @@ func TestReportsBlocksAndHidesGateVisibilityAndNotifications(t *testing.T) {
 	h := NewHandler(NewStore(DefaultPlaces()))
 	postJSON(t, h, "/reports", `{"reporter_id":"viewer","target_type":"echo","target_id":"echo-active-1","reason":"unsafe"}`, http.StatusCreated)
 	postJSON(t, h, "/hides", `{"user_id":"viewer","target_id":"echo-active-1"}`, http.StatusNoContent)
-	putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"viewer","kind":"echo"}`, http.StatusBadRequest)
+	putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"viewer","kind":"heart"}`, http.StatusBadRequest)
 
 	postJSON(t, h, "/blocks", `{"user_id":"user-seed-1","target_id":"blocked-user"}`, http.StatusNoContent)
 	postJSON(t, h, "/echoes/echo-active-1/replies", `{"user_id":"blocked-user","body":"hidden reply"}`, http.StatusForbidden)
@@ -71,12 +71,12 @@ func TestReportsBlocksAndHidesGateVisibilityAndNotifications(t *testing.T) {
 
 func TestSocialEchoValidationUsesInjectedStore(t *testing.T) {
 	h := &Handler{store: NewStore(nil), media: NewMemoryMediaUploadStore(), social: NewSocialStoreWithEchoAuthors(map[string]string{})}
-	putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"user-a","kind":"echo"}`, http.StatusNotFound)
+	putJSON(t, h, "/echoes/echo-active-1/reactions", `{"user_id":"user-a","kind":"heart"}`, http.StatusNotFound)
 }
 
 func TestSocialRejectsGhostEchoAndMalformedRoutes(t *testing.T) {
 	h := NewHandler(NewStore(DefaultPlaces()))
-	putJSON(t, h, "/echoes/ghost/reactions", `{"user_id":"user-a","kind":"echo"}`, http.StatusNotFound)
+	putJSON(t, h, "/echoes/ghost/reactions", `{"user_id":"user-a","kind":"heart"}`, http.StatusNotFound)
 
 	recorder := httptest.NewRecorder()
 	h.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/echoes/a/b/reactions", nil))

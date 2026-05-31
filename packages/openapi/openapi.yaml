@@ -499,7 +499,7 @@
           "published_at": {"type": "string", "format": "date-time"}
         }
       },
-      "ReactionRequest": {"type": "object", "required": ["user_id", "kind"], "properties": {"user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["echo", "seen"]}}},
+      "ReactionRequest": {"type": "object", "required": ["user_id", "kind"], "properties": {"user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["heart", "fire", "sad", "laugh", "clap", "mind_blown"]}}},
       "ReactionSummary": {"type": "object", "required": ["echo_id", "totals"], "properties": {"echo_id": {"type": "string"}, "totals": {"type": "object", "additionalProperties": {"type": "integer"}}}},
       "ReplyRequest": {"type": "object", "required": ["user_id", "body"], "properties": {"user_id": {"type": "string"}, "body": {"type": "string", "minLength": 1, "maxLength": 500}, "reply_to": {"type": "string"}}},
       "Reply": {"type": "object", "required": ["id", "echo_id", "user_id", "body", "posted_at"], "properties": {"id": {"type": "string"}, "echo_id": {"type": "string"}, "user_id": {"type": "string"}, "body": {"type": "string"}, "reply_to": {"type": "string"}, "edited": {"type": "boolean"}, "hidden": {"type": "boolean"}, "posted_at": {"type": "string", "format": "date-time"}}},

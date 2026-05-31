@@ -10,8 +10,12 @@ import (
 )
 
 const (
-	ReactionKindEcho = "echo"
-	ReactionKindSeen = "seen"
+	ReactionKindHeart     = "heart"
+	ReactionKindFire      = "fire"
+	ReactionKindSad       = "sad"
+	ReactionKindLaugh     = "laugh"
+	ReactionKindClap      = "clap"
+	ReactionKindMindBlown = "mind_blown"
 
 	ReportTargetEcho  = "echo"
 	ReportTargetReply = "reply"
@@ -138,7 +142,7 @@ type Notification struct {
 func (s *SocialStore) PutReaction(echoID string, req ReactionRequest, now time.Time) (ReactionSummary, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !validSocialID(echoID) || !validSocialID(req.UserID) || (req.Kind != ReactionKindEcho && req.Kind != ReactionKindSeen) || s.hidden(req.UserID, echoID) {
+	if !validSocialID(echoID) || !validSocialID(req.UserID) || !validReactionKind(req.Kind) || s.hidden(req.UserID, echoID) {
 		return ReactionSummary{}, ErrSocialInvalid
 	}
 	authorID, ok := s.echoAuthors[echoID]
@@ -157,7 +161,7 @@ func (s *SocialStore) ReactionSummary(echoID string) ReactionSummary {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if !validSocialID(echoID) || s.echoAuthors[echoID] == "" {
-		return ReactionSummary{EchoID: echoID, Totals: map[string]int{ReactionKindEcho: 0, ReactionKindSeen: 0}}
+		return ReactionSummary{EchoID: echoID, Totals: emptyReactionTotals()}
 	}
 	return s.reactionSummaryLocked(echoID)
 }
@@ -169,7 +173,7 @@ func (s *SocialStore) EchoKnown(echoID string) bool {
 }
 
 func (s *SocialStore) reactionSummaryLocked(echoID string) ReactionSummary {
-	totals := map[string]int{ReactionKindEcho: 0, ReactionKindSeen: 0}
+	totals := emptyReactionTotals()
 	for _, reaction := range s.reactions {
 		if reaction.EchoID == echoID {
 			totals[reaction.Kind]++
@@ -323,6 +327,19 @@ func validSocialID(id string) bool {
 
 func validReportTarget(target string) bool {
 	return target == ReportTargetEcho || target == ReportTargetReply || target == ReportTargetUser
+}
+
+func validReactionKind(kind string) bool {
+	switch kind {
+	case ReactionKindHeart, ReactionKindFire, ReactionKindSad, ReactionKindLaugh, ReactionKindClap, ReactionKindMindBlown:
+		return true
+	default:
+		return false
+	}
+}
+
+func emptyReactionTotals() map[string]int {
+	return map[string]int{ReactionKindHeart: 0, ReactionKindFire: 0, ReactionKindSad: 0, ReactionKindLaugh: 0, ReactionKindClap: 0, ReactionKindMindBlown: 0}
 }
 
 func nextSocialID(prefix string, n int) string { return prefix + "-" + strconv.Itoa(n) }
