@@ -95,3 +95,55 @@ func TestCreateRequestPendingReview(t *testing.T) {
 		t.Fatalf("bad request response: %+v", p)
 	}
 }
+
+func TestNearbyReturnsActivePublicPlaces(t *testing.T) {
+	h := NewHandler(NewStore(DefaultPlaces()))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/discovery/nearby?lat=37.7749&lon=-122.4194&radius_meters=100", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var out struct {
+		Places []Place `json:"places"`
+	}
+	_ = json.NewDecoder(rec.Body).Decode(&out)
+	if len(out.Places) != 1 || out.Places[0].ID != "place-active-1" {
+		t.Fatalf("unexpected nearby result: %+v", out.Places)
+	}
+}
+
+func TestNearbyRejectsBadCoordinatesAndRadius(t *testing.T) {
+	h := NewHandler(NewStore(DefaultPlaces()))
+	for _, path := range []string{
+		"/discovery/nearby?lat=nope&lon=-122.4",
+		"/discovery/nearby?lat=37.7&lon=-122.4&radius_meters=1000000",
+	} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s status %d", path, rec.Code)
+		}
+	}
+}
+
+func TestPlaceEchoesReturnsPublishedEchoesOnlyForActivePlace(t *testing.T) {
+	h := NewHandler(NewStore(DefaultPlaces()))
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/places/place-active-1/echoes", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var out struct {
+		Echoes []EchoSummary `json:"echoes"`
+	}
+	_ = json.NewDecoder(rec.Body).Decode(&out)
+	if len(out.Echoes) != 1 || out.Echoes[0].Status != "published" {
+		t.Fatalf("unexpected echoes: %+v", out.Echoes)
+	}
+
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/places/place-restricted-1/echoes", nil))
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("restricted place echoes status %d", rec.Code)
+	}
+}

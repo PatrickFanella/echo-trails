@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "python3 scripts/lint-openapi.py openapi.yaml"
+    "generate": "python3 scripts/generate-contracts.py",
+    "lint": "python3 scripts/lint-openapi.py openapi.yaml",
+    "check": "npm run lint && npm run generate && git diff --exit-code -- ../../packages/shared-contracts/src/openapi-paths.ts ../../apps/ios/Generated/OpenAPIPaths.swift"
   }
 }

@@ -2,11 +2,16 @@
 
 `openapi.yaml` is the baseline machine-readable API contract for Go, Swift, and TypeScript integration work and the target location for generated client checks.
 
-During scaffold phase the file is JSON-compatible YAML and is validated with a dependency-free lint script:
+The file is JSON-compatible YAML and is validated with a dependency-free lint script. Contract path constants are generated for TypeScript and Swift drift checks:
 
 ```bash
 cd packages/openapi
-npm run lint
+npm run check
 ```
 
-The repository baseline `make verify` runs the same lint command whenever `packages/openapi/package.json` is present.
+Generated files:
+
+- `packages/shared-contracts/src/openapi-paths.ts`
+- `apps/ios/Generated/OpenAPIPaths.swift`
+
+The repository baseline `make verify` runs the same check whenever `packages/openapi/package.json` is present.

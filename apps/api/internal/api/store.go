@@ -1,24 +1,37 @@
 package api
 
 import (
+	"math"
+	"sort"
 	"strings"
 	"sync"
+	"time"
 )
 
 type PlacesStore struct {
 	mu         sync.RWMutex
 	places     map[string]Place
 	placeAlias map[string]string
+	echoes     map[string][]EchoSummary
 }
 
 func NewStore(initial []Place) *PlacesStore {
-	s := &PlacesStore{places: map[string]Place{}, placeAlias: map[string]string{}}
+	s := &PlacesStore{places: map[string]Place{}, placeAlias: map[string]string{}, echoes: map[string][]EchoSummary{}}
 	for _, p := range initial {
 		s.places[p.ID] = p
 		for _, aliasID := range p.AliasIDs {
 			s.placeAlias[aliasID] = p.ID
 		}
 	}
+	s.echoes["place-active-1"] = []EchoSummary{{
+		ID:          "echo-active-1",
+		PlaceID:     "place-active-1",
+		AuthorID:    "user-seed-1",
+		Title:       "Storm meeting place",
+		Body:        "People gathered here after every big storm.",
+		Status:      "published",
+		PublishedAt: time.Date(2026, 5, 31, 12, 0, 0, 0, time.UTC),
+	}}
 	return s
 }
 
@@ -52,7 +65,57 @@ func (s *PlacesStore) Search(query string, includeRestricted bool) []Place {
 			out = append(out, p)
 		}
 	}
+	sortPlaces(out)
 	return out
+}
+
+func (s *PlacesStore) Nearby(lat, lon float64, radiusMeters int, includeRestricted bool) []Place {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var out []Place
+	for _, p := range s.places {
+		if p.Latitude == nil || p.Longitude == nil {
+			continue
+		}
+		if p.State != PlaceStateActive && p.State != PlaceStateRestricted {
+			continue
+		}
+		if p.State == PlaceStateRestricted && !includeRestricted {
+			continue
+		}
+		if distanceMeters(lat, lon, *p.Latitude, *p.Longitude) <= float64(radiusMeters) {
+			out = append(out, p)
+		}
+	}
+	sortPlaces(out)
+	return out
+}
+
+func sortPlaces(places []Place) {
+	sort.Slice(places, func(i, j int) bool { return places[i].ID < places[j].ID })
+}
+
+func (s *PlacesStore) Echoes(placeID string, limit int) []EchoSummary {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	echoes := append([]EchoSummary(nil), s.echoes[placeID]...)
+	if len(echoes) > limit {
+		return echoes[:limit]
+	}
+	return echoes
+}
+
+func distanceMeters(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadiusMeters = 6371000
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLon := (lon2 - lon1) * math.Pi / 180
+	rLat1 := lat1 * math.Pi / 180
+	rLat2 := lat2 * math.Pi / 180
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) + math.Cos(rLat1)*math.Cos(rLat2)*math.Sin(dLon/2)*math.Sin(dLon/2)
+	return earthRadiusMeters * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 
 func matchesPlace(p Place, q string) bool {

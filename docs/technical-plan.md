@@ -140,7 +140,7 @@ Shared API primitives live under `apps/api/internal/primitives` and establish th
 - Idempotency key replay semantics with request fingerprint protection.
 - Structured JSON error envelopes shaped as `{ "error": { "code", "title", "detail", "meta" } }`.
 
-The baseline machine-readable contract lives in `packages/openapi/openapi.yaml`. It starts with placeholder health, auth, place, and Echo paths and is validated by `packages/openapi/scripts/lint-openapi.py` through `npm run lint` as part of `make verify`.
+The baseline machine-readable contract lives in `packages/openapi/openapi.yaml`. It starts with health, auth, place, and Echo paths and is validated by `packages/openapi/scripts/lint-openapi.py`. `npm run check` also regenerates TypeScript and Swift path constants and fails on drift as part of `make verify`.
 
 Initial resource groups:
 
@@ -153,6 +153,7 @@ Initial resource groups:
 - `/places/search`
 - `/places/{placeId}`
 - `/places/{placeId}/echoes`
+- `/discovery/nearby`
 - `/places/{placeId}/subscribe`
 - `/places/requests`
 - `/echoes`

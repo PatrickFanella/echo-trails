@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/api"
 )
@@ -19,14 +21,20 @@ func main() {
 
 	server := api.NewServer(api.Config{Sender: api.DevEmailSender{Log: log.Printf}})
 	places := api.NewHandler(api.NewStore(api.DefaultPlaces()))
+	obs := api.NewObservability("api", slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	mux := http.NewServeMux()
+	mux.HandleFunc("/health", obs.HandleHealth)
+	mux.HandleFunc("/ready", obs.HandleReady)
+	mux.HandleFunc("/metrics", obs.HandleMetrics)
 	mux.Handle("/places/search", places)
+	mux.Handle("/discovery/nearby", places)
 	mux.Handle("/places/requests", places)
 	mux.Handle("/places/", places)
 	mux.Handle("/", server.Router())
 
 	log.Printf("starting echotrails api on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	httpServer := &http.Server{Addr: addr, Handler: obs.Middleware(mux), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second}
+	if err := httpServer.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }

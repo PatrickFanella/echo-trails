@@ -160,7 +160,7 @@ openapi-check: ## Run OpenAPI checks when the contract package is scaffolded
 			echo 'OpenAPI package exists but no openapi.yaml or openapi.yml was found'; exit 1; \
 		fi; \
 		if [ -f "$(OPENAPI_DIR)/package.json" ]; then \
-			cd "$(OPENAPI_DIR)" && npm run lint; \
+			cd "$(OPENAPI_DIR)" && npm run check; \
 		else \
 			echo 'OpenAPI contract present; skip npm lint because package.json is not present yet'; \
 		fi; \

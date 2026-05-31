@@ -36,6 +36,27 @@
         }
       }
     },
+    "/ready": {
+      "get": {
+        "tags": ["health"],
+        "operationId": "getReadiness",
+        "summary": "Readiness check",
+        "responses": {
+          "200": {
+            "description": "Service is ready",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HealthResponse"}}}
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": ["health"],
+        "operationId": "getMetrics",
+        "summary": "Prometheus metrics",
+        "responses": {"200": {"description": "Prometheus text metrics"}}
+      }
+    },
     "/auth/apple": {
       "post": {
         "tags": ["auth"],
@@ -180,6 +201,44 @@
         }
       }
     },
+    "/places/{placeId}/echoes": {
+      "get": {
+        "tags": ["places", "echoes"],
+        "operationId": "listPlaceEchoes",
+        "summary": "List published Echoes for an active Place",
+        "parameters": [
+          {"$ref": "#/components/parameters/PlaceId"},
+          {"$ref": "#/components/parameters/Limit"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Published Echoes for the Place",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlaceEchoesResponse"}}}
+          },
+          "404": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
+    "/discovery/nearby": {
+      "get": {
+        "tags": ["places"],
+        "operationId": "nearbyPlaces",
+        "summary": "Find nearby active Places",
+        "parameters": [
+          {"$ref": "#/components/parameters/Latitude"},
+          {"$ref": "#/components/parameters/Longitude"},
+          {"$ref": "#/components/parameters/RadiusMeters"},
+          {"$ref": "#/components/parameters/IncludeRestricted"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Nearby Places",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlaceSearchResponse"}}}
+          },
+          "400": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
     "/places/requests": {
       "post": {
         "tags": ["places"],
@@ -280,7 +339,11 @@
       "EchoId": {"name": "echoId", "in": "path", "required": true, "schema": {"type": "string"}},
       "IdempotencyKey": {"name": "Idempotency-Key", "in": "header", "required": false, "schema": {"type": "string", "minLength": 1, "maxLength": 255}},
       "IncludeRestricted": {"name": "include_restricted", "in": "query", "required": false, "schema": {"type": "boolean", "default": false}},
+      "Latitude": {"name": "lat", "in": "query", "required": true, "schema": {"type": "number", "minimum": -90, "maximum": 90}},
+      "Limit": {"name": "limit", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20}},
+      "Longitude": {"name": "lon", "in": "query", "required": true, "schema": {"type": "number", "minimum": -180, "maximum": 180}},
       "PlaceId": {"name": "placeId", "in": "path", "required": true, "schema": {"type": "string"}},
+      "RadiusMeters": {"name": "radius_meters", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 10, "maximum": 10000, "default": 1000}},
       "SearchQuery": {"name": "q", "in": "query", "required": false, "schema": {"type": "string"}}
     },
     "responses": {
@@ -342,6 +405,19 @@
           "public_location": {"$ref": "#/components/schemas/Coordinate"},
           "created_at": {"type": "string", "format": "date-time"},
           "updated_at": {"type": "string", "format": "date-time"}
+        }
+      },
+      "EchoSummary": {
+        "type": "object",
+        "required": ["id", "place_id", "author_id", "title", "body", "status", "published_at"],
+        "properties": {
+          "id": {"type": "string"},
+          "place_id": {"type": "string"},
+          "author_id": {"type": "string"},
+          "title": {"type": "string"},
+          "body": {"type": "string"},
+          "status": {"type": "string", "enum": ["published"]},
+          "published_at": {"type": "string", "format": "date-time"}
         }
       },
       "EmailAuthStartRequest": {
@@ -408,6 +484,14 @@
         "type": "object",
         "required": ["places"],
         "properties": {"places": {"type": "array", "items": {"$ref": "#/components/schemas/Place"}}}
+      },
+      "PlaceEchoesResponse": {
+        "type": "object",
+        "required": ["echoes", "next_cursor"],
+        "properties": {
+          "echoes": {"type": "array", "items": {"$ref": "#/components/schemas/EchoSummary"}},
+          "next_cursor": {"type": "string"}
+        }
       },
       "ProviderMapping": {
         "type": "object",
