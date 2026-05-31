@@ -15,10 +15,14 @@ FORBIDDEN_IMPORTS = [
     "SwiftData",
     "AuthenticationServices",
     "Security",
+    "CoreLocation",
+    "Photos",
+    "AVFoundation",
+    "UIKit",
 ]
 
 FORBIDDEN_IMPORT_PATTERN = re.compile(
-    r"^\s*(?:@_exported\s+)?import(?:\s+\w+)?\s+(SwiftUI|MapKit|SwiftData|AuthenticationServices|Security)\b",
+    r"^\s*(?:@_exported\s+)?import(?:\s+\w+)?\s+(SwiftUI|MapKit|SwiftData|AuthenticationServices|Security|CoreLocation|Photos|AVFoundation|UIKit)\b",
     re.MULTILINE,
 )
 
@@ -27,6 +31,16 @@ REQUIRED_SNIPPETS = {
     SOURCES / "NavigationRoute.swift": ["case placeDetail", "case echoDetail", "case userProfile", "case mediaUploadStatus", "requiresAuthentication"],
     SOURCES / "NavigationState.swift": ["ScreenDescriptor", "requiredAPIPath", "accessibilityLabel"],
     TESTS / "NavigationShellTests.swift": ["testDefaultNavigationStartsOnMapTab", "testDeepLinkParsingForCoreRoutes", "testRejectsUnsafeOrUnknownRoutes"],
+    SOURCES / "MapContracts.swift": ["CoordinateValue", "PlaceMarkerDescriptor", "PublicLocationPrecision", "/discovery/nearby"],
+    SOURCES / "ExploreContracts.swift": ["ExploreSearchQuery", "ExploreScope", "ExploreSectionDescriptor", "RankingReason"],
+    SOURCES / "CreateEchoContracts.swift": ["EchoDraft", "EchoDraftValidation", "CreationTokenDescriptor", "CreateFlowStep"],
+    SOURCES / "LocalPersistenceContracts.swift": ["LocalCacheEntityDescriptor", "swiftDataReadyEntities", "serverSourced"],
+    SOURCES / "OutboxContracts.swift": ["OutboxItem", "OutboxState", "RetryPolicy", "SyncConflictPolicy"],
+    SOURCES / "MediaComposerContracts.swift": ["MediaAttachmentDescriptor", "MediaComposerLimits", "UploadIntent", "UploadStatusDescriptor"],
+    SOURCES / "ProfileContracts.swift": ["PublicProfileDescriptor", "PrivateProfileSummary"],
+    SOURCES / "ActivityContracts.swift": ["ActivityItemDescriptor", "NotificationPreviewPolicy", "ModerationActivityDescriptor", "OutboxActivityDescriptor"],
+    SOURCES / "AccessibilityContracts.swift": ["AccessibilityDescriptor", "AccessibilityAuditRule", "AccessibilityAuditResult", "PhaseThreeAccessibilityCatalog"],
+    SOURCES / "ContractPath.swift": ["safeSegment", "placeEchoes", "userProfile"],
 }
 
 
@@ -41,11 +55,17 @@ def main() -> int:
                 print(f"{file_path} missing required snippet: {snippet}", file=sys.stderr)
                 return 1
 
-    for swift_file in SOURCES.rglob("*.swift"):
+    for swift_file in list(SOURCES.rglob("*.swift")) + list(TESTS.rglob("*.swift")):
         text = swift_file.read_text(encoding="utf-8")
         match = FORBIDDEN_IMPORT_PATTERN.search(text)
         if match:
             print(f"forbidden framework import in #36 navigation shell: {swift_file}: {match.group(0).strip()}", file=sys.stderr)
+            return 1
+
+    prototype_root = ROOT.parents[1] / "ios"
+    for swift_file in SOURCES.rglob("*.swift"):
+        if str(prototype_root) in swift_file.read_text(encoding="utf-8"):
+            print(f"forbidden reference to generated prototype ios/ in {swift_file}", file=sys.stderr)
             return 1
 
     identity = (SOURCES / "AppIdentity.swift").read_text(encoding="utf-8")

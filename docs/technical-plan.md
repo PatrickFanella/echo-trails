@@ -376,6 +376,15 @@ The `ios-boundary-check` target verifies tab order, route contracts, and absence
 of SwiftUI, MapKit, SwiftData, AuthenticationServices, and Security imports until
 machine-specific UI/auth issues can be tested with Xcode.
 
+Current scoped implementation target for #37-#43 closes Phase 3 as contract-only
+Swift Package work on Linux. It adds descriptors/tests for Map markers and Place
+detail, Explore search sections, Place-first Echo draft validation, SwiftData-ready
+cache/outbox schema descriptors, media composer limits/upload intents, Profile and
+Activity status rows, and accessibility audit surfaces. These contracts use only
+Foundation and deterministic Python boundary checks; actual SwiftUI screens,
+MapKit, SwiftData models, media pickers, runtime networking, Keychain/auth flows,
+and Xcode UI smoke tests remain deferred to a macOS-capable implementation pass.
+
 ### Phase 3: iOS clean rebuild
 
 - New SwiftUI project.
