@@ -9,12 +9,12 @@ IOS_SCHEME := EchoTrails
 IOS_DESTINATION := platform=iOS Simulator,name=iPhone 16
 LOCAL_COMPOSE := infra/local/compose.yaml
 
-.PHONY: help verify fmt fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check local-compose-check go-check ts-check openapi-check swift-check
+.PHONY: help verify fmt fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check local-compose-check go-check ts-check openapi-check ios-boundary-check swift-check
 
 help: ## Show commands
 	@awk 'BEGIN {FS = ":.*##"; printf "Commands:\n"} /^[a-zA-Z0-9_-]+:.*##/ {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-verify: fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check local-compose-check openapi-check swift-check ## Run all checks
+verify: fmt-check lint test db-migration-check docs-check open-pilot-check secrets-check local-compose-check openapi-check ios-boundary-check swift-check ## Run all checks
 
 fmt: ## Format files where repo tooling is available
 	@for app in $(GO_APPS); do \
@@ -166,6 +166,13 @@ openapi-check: ## Run OpenAPI checks when the contract package is scaffolded
 		fi; \
 	else \
 		echo 'skip OpenAPI checks: packages/openapi/ not present yet'; \
+	fi
+
+ios-boundary-check: ## Run Linux-safe iOS source boundary checks
+	@if [ -f apps/ios/Scripts/check-navigation-boundaries.py ]; then \
+		python3 apps/ios/Scripts/check-navigation-boundaries.py; \
+	else \
+		echo 'skip iOS boundary checks: script not present yet'; \
 	fi
 
 swift-check: ## Run Swift/Xcode checks when local tooling is available

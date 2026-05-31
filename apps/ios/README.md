@@ -12,6 +12,10 @@ Current scope is a Swift Package shell only:
 - environment selection for local/staging/production API base URLs
 - pure Swift API client configuration seams
 - bootstrap state for the eventual SwiftUI app target
+- pure Swift navigation route/state model
+- deep-link parsing contracts for Places, Echoes, profiles, and upload status
+- screen descriptors with titles, accessibility label seeds, required API paths, and auth metadata
+- Linux-safe boundary checks that forbid SwiftUI/MapKit/SwiftData/AuthServices/Security imports until Xcode-scoped issues
 
 No auth, Keychain storage, SwiftData, runtime networking, MapKit UI, media composer, or upload UI belongs in this baseline issue.
 

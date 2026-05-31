@@ -369,6 +369,13 @@ API client configuration seams, and navigation descriptors. Runtime auth,
 Keychain, SwiftData, networking, MapKit, media composer UI, and Xcode-only smoke
 tests start in later Phase 3 issues.
 
+Current scoped implementation target for #36 keeps navigation Linux-verifiable as
+pure Swift data: route parsing, default selected tab, preferred tab metadata,
+screen descriptors, accessibility label seeds, and auth-required route metadata.
+The `ios-boundary-check` target verifies tab order, route contracts, and absence
+of SwiftUI, MapKit, SwiftData, AuthenticationServices, and Security imports until
+machine-specific UI/auth issues can be tested with Xcode.
+
 ### Phase 3: iOS clean rebuild
 
 - New SwiftUI project.

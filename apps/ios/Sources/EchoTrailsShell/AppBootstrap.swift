@@ -5,12 +5,14 @@ public struct AppBootstrap: Equatable, Sendable {
     public let apiClient: APIClientConfiguration
     public let navigationTabs: [ShellTabs]
     public let navigationDescriptors: [NavigationTabDescriptor]
+    public let navigationState: NavigationState
 
-    public init(configuration: AppConfiguration = AppConfiguration()) {
+    public init(configuration: AppConfiguration = AppConfiguration(), initialRoute: NavigationRoute = .tab(.map)) {
         self.configuration = configuration
         self.apiClient = APIClientConfiguration.from(configuration)
         self.navigationTabs = ShellTabs.allCases
         self.navigationDescriptors = ShellTabs.allCases.map(NavigationTabDescriptor.init(tab:))
+        self.navigationState = NavigationState(route: initialRoute)
     }
 }
 
