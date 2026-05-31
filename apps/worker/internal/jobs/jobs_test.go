@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 )
@@ -9,6 +10,10 @@ import (
 type fixedClock struct{ now time.Time }
 
 func (c fixedClock) Now() time.Time { return c.now }
+
+type failingHandler struct{}
+
+func (failingHandler) HandleJob(context.Context, Job) error { return errors.New("handler failed") }
 
 func TestProcessorSucceedsValidMediaJob(t *testing.T) {
 	queue := NewMemoryQueue([]Job{New("job-1", TypeProcessMedia, "asset-1")})
@@ -110,5 +115,17 @@ func TestRedisConfigRequiresExplicitConnectionSettings(t *testing.T) {
 	}
 	if (RedisConfig{URL: "redis://127.0.0.1:6379", StreamName: "media_jobs"}).Valid() {
 		t.Fatal("partial redis config should be invalid")
+	}
+}
+
+func TestProcessorRetriesHandlerFailure(t *testing.T) {
+	queue := NewMemoryQueue([]Job{New("job-1", TypeProcessMedia, "asset-1")})
+	processor := Processor{Queue: queue, Handler: failingHandler{}}
+
+	if err := processor.ProcessOne(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if queue.PendingCount() != 1 || queue.SucceededCount() != 0 {
+		t.Fatalf("bad retry state pending=%d succeeded=%d", queue.PendingCount(), queue.SucceededCount())
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"git.subcult.tv/subculture-collective/echo-trails/apps/worker/internal/jobs"
+	"git.subcult.tv/subculture-collective/echo-trails/apps/worker/internal/media"
 )
 
 func main() {
@@ -20,7 +21,8 @@ func main() {
 		jobs.New("dev-generate-transcript", jobs.TypeGenerateTranscript, "33333333-3333-4333-8333-333333333333"),
 		jobs.New("dev-scan-media-safety", jobs.TypeScanMediaSafety, "33333333-3333-4333-8333-333333333333"),
 	})
-	processor := jobs.Processor{Queue: queue, Logger: logger}
+	catalog := media.NewMemoryCatalog([]media.Asset{{ID: "33333333-3333-4333-8333-333333333333", MediaType: "image", ContentType: "image/jpeg", ObjectKey: "media/original/33333333-3333-4333-8333-333333333333/original.jpg", Status: media.AssetStatusUploaded, Metadata: map[string]string{"gps": "redacted-dev-fixture"}}})
+	processor := jobs.Processor{Queue: queue, Logger: logger, Handler: media.JobHandler{Processor: media.Processor{Catalog: catalog}}}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	for {

@@ -332,9 +332,16 @@ content type, size, idempotency key replay, opaque object keys, and hide upload
 URLs after completion/expiry. Returned upload URLs are local-dev placeholders
 for MinIO, not production presigned URLs. The worker queue now has explicit enqueue,
 reserve, retry/backoff, dead-letter, and Redis connection configuration
-contracts. Real Redis reservation, presigned-object verification,
-transcription engines, media transforms, and moderation scanners remain later
-work.
+contracts.
+
+Current scoped implementation target for #30 adds deterministic media processing
+interfaces under `apps/worker/internal/media`. It models metadata-stripping
+results, derivative plans for image thumbnails/previews, audio waveforms, and
+video thumbnail/preview/waveform outputs, and uploaded/processing →
+pending-review state transitions. The worker job processor can call this handler
+for `process_media` jobs. Real Redis reservation, presigned-object verification,
+FFmpeg/ImageMagick execution, transcription engines, and moderation scanners
+remain later isolated adapters.
 
 Current scoped iOS implementation target for #13 is a Swift Package shell under
 `apps/ios` with stable app identity constants, generated OpenAPI path constants,

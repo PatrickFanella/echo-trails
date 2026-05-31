@@ -163,8 +163,13 @@ func (c RedisConfig) Valid() bool {
 }
 
 type Processor struct {
-	Queue  Queue
-	Logger *slog.Logger
+	Queue   Queue
+	Logger  *slog.Logger
+	Handler Handler
+}
+
+type Handler interface {
+	HandleJob(context.Context, Job) error
 }
 
 func (p Processor) ProcessOne(ctx context.Context) error {
@@ -177,6 +182,11 @@ func (p Processor) ProcessOne(ctx context.Context) error {
 	}
 	if err := validateJob(job); err != nil {
 		return p.Queue.Fail(ctx, job, err)
+	}
+	if p.Handler != nil {
+		if err := p.Handler.HandleJob(ctx, job); err != nil {
+			return p.Queue.Fail(ctx, job, err)
+		}
 	}
 	return p.Queue.Succeed(ctx, job)
 }

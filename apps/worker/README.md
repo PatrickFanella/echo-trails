@@ -25,5 +25,16 @@ The worker queue framework currently provides:
 - explicit Redis connection configuration validation
 
 The executable still uses the deterministic in-memory queue. Real Redis stream
-reservation, media transforms, transcription engines, and moderation scanners
-are later work.
+reservation is later work.
+
+Current media processing skeleton provides deterministic interfaces and tests
+for:
+
+- metadata-safe processing results
+- image thumbnails/previews
+- audio waveforms
+- video thumbnail/preview/waveform plans
+- uploaded/processing → pending-review status transition
+
+It does not run FFmpeg, ImageMagick, Whisper, or real object-storage reads yet.
+Those integrations remain later isolated adapters.
