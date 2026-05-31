@@ -343,6 +343,20 @@ for `process_media` jobs. Real Redis reservation, presigned-object verification,
 FFmpeg/ImageMagick execution, transcription engines, and moderation scanners
 remain later isolated adapters.
 
+Current scoped implementation target for #31/#32 adds deterministic worker
+contracts for `generate_transcript` and `scan_media_safety`. Transcription writes
+best-effort transcript records for audio/video, skips images, and stores failures
+without panicking jobs. Moderation is conservative: only explicit low-risk scanner
+results are approved; unknown, medium, or scanner-offline states require review,
+and high-risk results are rejected. Real Whisper/audio extraction, ML moderation,
+and separate moderation hosts remain deferred adapters.
+
+Current scoped implementation target for #33 extends media upload status with an
+activity-safe lifecycle: `created`, `uploaded`, `processing`, `pending_review`,
+`failed`, and `expired`, plus optional transcript/moderation status summaries.
+Private upload URLs remain hidden after completion or expiry; no auth ownership,
+notifications, or iOS Activity UI are included yet.
+
 Current scoped iOS implementation target for #13 is a Swift Package shell under
 `apps/ios` with stable app identity constants, generated OpenAPI path constants,
 and Phase 3 tab names only. No auth, SwiftData, networking, map UI, or media UI

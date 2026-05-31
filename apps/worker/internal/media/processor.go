@@ -57,11 +57,21 @@ type Processor struct {
 }
 
 type JobHandler struct {
-	Processor Processor
+	Processor     Processor
+	Transcription TranscriptionProcessor
+	Moderation    ModerationProcessor
 }
 
 func (h JobHandler) HandleJob(ctx context.Context, job jobs.Job) error {
 	if job.Type != jobs.TypeProcessMedia {
+		if job.Type == jobs.TypeGenerateTranscript {
+			_, err := h.Transcription.ProcessAsset(ctx, job.AssetID)
+			return err
+		}
+		if job.Type == jobs.TypeScanMediaSafety {
+			_, err := h.Moderation.ProcessAsset(ctx, job.AssetID)
+			return err
+		}
 		return nil
 	}
 	_, err := h.Processor.ProcessAsset(ctx, job.AssetID)
@@ -154,16 +164,34 @@ func newDerivative(asset Asset, kind, contentType string) Derivative {
 }
 
 type MemoryCatalog struct {
-	Assets  map[string]Asset
-	Results map[string]Result
+	Assets            map[string]Asset
+	Results           map[string]Result
+	Transcripts       map[string]Transcript
+	ModerationReviews map[string]ModerationReview
 }
 
 func NewMemoryCatalog(assets []Asset) *MemoryCatalog {
-	catalog := &MemoryCatalog{Assets: map[string]Asset{}, Results: map[string]Result{}}
+	catalog := &MemoryCatalog{Assets: map[string]Asset{}, Results: map[string]Result{}, Transcripts: map[string]Transcript{}, ModerationReviews: map[string]ModerationReview{}}
 	for _, asset := range assets {
 		catalog.Assets[asset.ID] = asset
 	}
 	return catalog
+}
+
+func (c *MemoryCatalog) SaveModerationReview(_ context.Context, review ModerationReview) error {
+	if c.ModerationReviews == nil {
+		c.ModerationReviews = map[string]ModerationReview{}
+	}
+	c.ModerationReviews[review.AssetID] = review
+	return nil
+}
+
+func (c *MemoryCatalog) SaveTranscript(_ context.Context, transcript Transcript) error {
+	if c.Transcripts == nil {
+		c.Transcripts = map[string]Transcript{}
+	}
+	c.Transcripts[transcript.AssetID] = transcript
+	return nil
 }
 
 func (c *MemoryCatalog) LoadAsset(_ context.Context, assetID string) (Asset, error) {

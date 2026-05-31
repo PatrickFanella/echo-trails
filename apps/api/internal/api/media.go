@@ -17,6 +17,17 @@ const (
 	MediaUploadStatusExpired  = "expired"
 	MediaUploadStatusFailed   = "failed"
 
+	MediaActivityStatusCreated       = "created"
+	MediaActivityStatusUploaded      = "uploaded"
+	MediaActivityStatusProcessing    = "processing"
+	MediaActivityStatusPendingReview = "pending_review"
+	MediaActivityStatusFailed        = "failed"
+	MediaActivityStatusExpired       = "expired"
+
+	MediaTranscriptStatusPending = "pending"
+	MediaModerationStatusPending = "pending"
+	MediaModerationRiskUnknown   = "unknown"
+
 	defaultMediaBucket = "echotrails-dev"
 	maxMediaBytes      = 100 * 1024 * 1024
 )
@@ -35,13 +46,18 @@ type CreateMediaUploadRequest struct {
 }
 
 type MediaUploadResponse struct {
-	UploadID     string    `json:"upload_id"`
-	MediaAssetID string    `json:"media_asset_id"`
-	UploadURL    string    `json:"upload_url,omitempty"`
-	Method       string    `json:"method"`
-	ObjectKey    string    `json:"object_key"`
-	Status       string    `json:"status"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	UploadID         string    `json:"upload_id"`
+	MediaAssetID     string    `json:"media_asset_id"`
+	UploadURL        string    `json:"upload_url,omitempty"`
+	Method           string    `json:"method"`
+	ObjectKey        string    `json:"object_key"`
+	Status           string    `json:"status"`
+	ActivityStatus   string    `json:"activity_status"`
+	TranscriptStatus string    `json:"transcript_status,omitempty"`
+	ModerationStatus string    `json:"moderation_status,omitempty"`
+	ModerationRisk   string    `json:"moderation_risk,omitempty"`
+	StatusReason     string    `json:"status_reason,omitempty"`
+	ExpiresAt        time.Time `json:"expires_at"`
 }
 
 type MediaUploadStore interface {
@@ -78,6 +94,8 @@ func (s *MemoryMediaUploadStore) CreateUpload(_ context.Context, req CreateMedia
 			response := s.uploads[uploadID]
 			if response.Status == MediaUploadStatusCreated && !response.ExpiresAt.After(now) {
 				response.Status = MediaUploadStatusExpired
+				response.ActivityStatus = MediaActivityStatusExpired
+				response.StatusReason = "upload expired before completion"
 				s.uploads[uploadID] = response
 			}
 			return s.safeResponse(response, now), nil
@@ -87,13 +105,14 @@ func (s *MemoryMediaUploadStore) CreateUpload(_ context.Context, req CreateMedia
 	assetID := newOpaqueID("ast")
 	objectKey := fmt.Sprintf("media/original/%s/%s", assetID, safeExtension(req.ContentType))
 	response := MediaUploadResponse{
-		UploadID:     uploadID,
-		MediaAssetID: assetID,
-		UploadURL:    strings.TrimRight(s.baseURL, "/") + "/" + objectKey,
-		Method:       "PUT",
-		ObjectKey:    objectKey,
-		Status:       MediaUploadStatusCreated,
-		ExpiresAt:    now.Add(15 * time.Minute).UTC(),
+		UploadID:       uploadID,
+		MediaAssetID:   assetID,
+		UploadURL:      strings.TrimRight(s.baseURL, "/") + "/" + objectKey,
+		Method:         "PUT",
+		ObjectKey:      objectKey,
+		Status:         MediaUploadStatusCreated,
+		ActivityStatus: MediaActivityStatusCreated,
+		ExpiresAt:      now.Add(15 * time.Minute).UTC(),
 	}
 	s.uploads[uploadID] = response
 	if idempotencyKey != "" {
@@ -112,6 +131,8 @@ func (s *MemoryMediaUploadStore) GetUpload(_ context.Context, uploadID string) (
 	now := s.now().UTC()
 	if response.Status == MediaUploadStatusCreated && !response.ExpiresAt.After(now) {
 		response.Status = MediaUploadStatusExpired
+		response.ActivityStatus = MediaActivityStatusExpired
+		response.StatusReason = "upload expired before completion"
 		s.uploads[uploadID] = response
 	}
 	return s.safeResponse(response, now), nil
@@ -130,10 +151,17 @@ func (s *MemoryMediaUploadStore) CompleteUpload(_ context.Context, uploadID stri
 	}
 	if !response.ExpiresAt.After(now) {
 		response.Status = MediaUploadStatusExpired
+		response.ActivityStatus = MediaActivityStatusExpired
+		response.StatusReason = "upload expired before completion"
 		s.uploads[uploadID] = response
 		return MediaUploadResponse{}, ErrMediaUploadExpired
 	}
 	response.Status = MediaUploadStatusUploaded
+	response.ActivityStatus = MediaActivityStatusProcessing
+	response.TranscriptStatus = MediaTranscriptStatusPending
+	response.ModerationStatus = MediaModerationStatusPending
+	response.ModerationRisk = MediaModerationRiskUnknown
+	response.StatusReason = "upload complete; processing queued"
 	s.uploads[uploadID] = response
 	return s.safeResponse(response, now), nil
 }
@@ -142,7 +170,25 @@ func (s *MemoryMediaUploadStore) safeResponse(response MediaUploadResponse, now 
 	if response.Status != MediaUploadStatusCreated || !response.ExpiresAt.After(now) {
 		response.UploadURL = ""
 	}
+	if response.ActivityStatus == "" {
+		response.ActivityStatus = activityStatusForUpload(response.Status)
+	}
 	return response
+}
+
+func activityStatusForUpload(status string) string {
+	switch status {
+	case MediaUploadStatusCreated:
+		return MediaActivityStatusCreated
+	case MediaUploadStatusUploaded:
+		return MediaActivityStatusUploaded
+	case MediaUploadStatusExpired:
+		return MediaActivityStatusExpired
+	case MediaUploadStatusFailed:
+		return MediaActivityStatusFailed
+	default:
+		return MediaActivityStatusFailed
+	}
 }
 
 func validateMediaUpload(req CreateMediaUploadRequest) error {

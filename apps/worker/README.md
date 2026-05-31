@@ -35,6 +35,16 @@ for:
 - audio waveforms
 - video thumbnail/preview/waveform plans
 - uploaded/processing → pending-review status transition
+- best-effort audio/video transcript records
+- conservative local moderation review records
 
-It does not run FFmpeg, ImageMagick, Whisper, or real object-storage reads yet.
-Those integrations remain later isolated adapters.
+Transcription currently uses an injectable `Transcriber` interface and deterministic
+fixture transcriber. Image assets are skipped; transcriber failures are stored as
+failed transcript records instead of crashing the worker.
+
+Moderation currently uses an injectable `SafetyScanner` interface and deterministic
+fixture scanner. Only explicit low risk is approved; unknown/medium/offline cases
+go to review, and high risk is rejected.
+
+It does not run FFmpeg, ImageMagick, Whisper, real ML moderation, or real
+object-storage reads yet. Those integrations remain later isolated adapters.

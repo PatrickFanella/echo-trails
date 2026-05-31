@@ -354,10 +354,10 @@
       "get": {
         "tags": ["media"],
         "operationId": "getMediaUpload",
-        "summary": "Get media upload status",
+        "summary": "Get activity-safe media upload lifecycle status",
         "parameters": [{"$ref": "#/components/parameters/UploadId"}],
         "responses": {
-          "200": {"description": "Upload status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "200": {"description": "Upload and processing lifecycle status without private upload URLs after completion or expiry", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
           "404": {"$ref": "#/components/responses/ErrorResponse"}
         }
       }
@@ -524,7 +524,7 @@
       },
       "MediaUploadResponse": {
         "type": "object",
-        "required": ["upload_id", "media_asset_id", "method", "object_key", "status", "expires_at"],
+        "required": ["upload_id", "media_asset_id", "method", "object_key", "status", "activity_status", "expires_at"],
         "properties": {
           "upload_id": {"type": "string"},
           "media_asset_id": {"type": "string"},
@@ -532,6 +532,11 @@
           "method": {"type": "string", "enum": ["PUT"]},
           "object_key": {"type": "string"},
           "status": {"type": "string", "enum": ["created", "uploaded", "expired", "failed"]},
+          "activity_status": {"type": "string", "enum": ["created", "uploaded", "processing", "pending_review", "failed", "expired"]},
+          "transcript_status": {"type": "string", "enum": ["pending", "processing", "succeeded", "failed", "skipped"]},
+          "moderation_status": {"type": "string", "enum": ["pending", "scanning", "approved", "needs_review", "rejected", "failed"]},
+          "moderation_risk": {"type": "string", "enum": ["unknown", "low", "medium", "high"]},
+          "status_reason": {"type": "string"},
           "expires_at": {"type": "string", "format": "date-time"}
         }
       },

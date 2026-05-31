@@ -47,8 +47,11 @@ func TestMediaUploadLifecycleIsIdempotentAndHidesURLAfterComplete(t *testing.T) 
 	}
 	var completed MediaUploadResponse
 	_ = json.NewDecoder(complete.Body).Decode(&completed)
-	if completed.Status != MediaUploadStatusUploaded || completed.UploadURL != "" {
+	if completed.Status != MediaUploadStatusUploaded || completed.ActivityStatus != MediaActivityStatusProcessing || completed.UploadURL != "" {
 		t.Fatalf("complete did not hide URL: %+v", completed)
+	}
+	if completed.TranscriptStatus != MediaTranscriptStatusPending || completed.ModerationStatus != MediaModerationStatusPending || completed.ModerationRisk != MediaModerationRiskUnknown {
+		t.Fatalf("complete did not expose safe activity status: %+v", completed)
 	}
 }
 
@@ -63,6 +66,29 @@ func TestMediaUploadRejectsBadContentTypeAndSize(t *testing.T) {
 		if rec.Code != http.StatusBadRequest {
 			t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
 		}
+	}
+}
+
+func TestMediaUploadStatusExposesActivityLifecycleWithoutPrivateURL(t *testing.T) {
+	h := NewHandler(NewStore(DefaultPlaces()))
+	body := []byte(`{"echo_id":"echo-active-1","media_type":"audio","content_type":"audio/mpeg","byte_size":2048}`)
+	create := httptest.NewRecorder()
+	h.ServeHTTP(create, httptest.NewRequest(http.MethodPost, "/media/uploads", bytes.NewReader(body)))
+	var created MediaUploadResponse
+	_ = json.NewDecoder(create.Body).Decode(&created)
+
+	complete := httptest.NewRecorder()
+	h.ServeHTTP(complete, httptest.NewRequest(http.MethodPost, "/media/uploads/"+created.UploadID+"/complete", nil))
+	if complete.Code != http.StatusOK {
+		t.Fatalf("complete status = %d body=%s", complete.Code, complete.Body.String())
+	}
+
+	status := httptest.NewRecorder()
+	h.ServeHTTP(status, httptest.NewRequest(http.MethodGet, "/media/uploads/"+created.UploadID, nil))
+	var activity MediaUploadResponse
+	_ = json.NewDecoder(status.Body).Decode(&activity)
+	if activity.UploadURL != "" || activity.ObjectKey == "" || activity.ActivityStatus != MediaActivityStatusProcessing {
+		t.Fatalf("bad activity status: %+v", activity)
 	}
 }
 
@@ -87,7 +113,7 @@ func TestMediaUploadIdempotencyReplayMarksExpired(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if replayed.UploadID != created.UploadID || replayed.Status != MediaUploadStatusExpired || replayed.UploadURL != "" {
+	if replayed.UploadID != created.UploadID || replayed.Status != MediaUploadStatusExpired || replayed.ActivityStatus != MediaActivityStatusExpired || replayed.UploadURL != "" {
 		t.Fatalf("bad expired replay: %+v", replayed)
 	}
 }

@@ -86,16 +86,10 @@ func TestProcessorPersistsResultAndClearsMetadata(t *testing.T) {
 	}
 }
 
-func TestJobHandlerProcessesMediaJobsOnly(t *testing.T) {
+func TestJobHandlerProcessesMediaJobs(t *testing.T) {
 	catalog := NewMemoryCatalog([]Asset{{ID: "asset-image", MediaType: "image", ContentType: "image/jpeg", ObjectKey: "media/original/asset-image/original.jpg", Status: AssetStatusUploaded}})
 	handler := JobHandler{Processor: Processor{Catalog: catalog}}
 
-	if err := handler.HandleJob(context.Background(), jobs.New("job-1", jobs.TypeGenerateTranscript, "asset-image")); err != nil {
-		t.Fatal(err)
-	}
-	if len(catalog.Results) != 0 {
-		t.Fatalf("non-media-processing job should not process asset: %+v", catalog.Results)
-	}
 	if err := handler.HandleJob(context.Background(), jobs.New("job-2", jobs.TypeProcessMedia, "asset-image")); err != nil {
 		t.Fatal(err)
 	}

@@ -21,8 +21,12 @@ func main() {
 		jobs.New("dev-generate-transcript", jobs.TypeGenerateTranscript, "33333333-3333-4333-8333-333333333333"),
 		jobs.New("dev-scan-media-safety", jobs.TypeScanMediaSafety, "33333333-3333-4333-8333-333333333333"),
 	})
-	catalog := media.NewMemoryCatalog([]media.Asset{{ID: "33333333-3333-4333-8333-333333333333", MediaType: "image", ContentType: "image/jpeg", ObjectKey: "media/original/33333333-3333-4333-8333-333333333333/original.jpg", Status: media.AssetStatusUploaded, Metadata: map[string]string{"gps": "redacted-dev-fixture"}}})
-	processor := jobs.Processor{Queue: queue, Logger: logger, Handler: media.JobHandler{Processor: media.Processor{Catalog: catalog}}}
+	catalog := media.NewMemoryCatalog([]media.Asset{{ID: "33333333-3333-4333-8333-333333333333", MediaType: "video", ContentType: "video/mp4", ObjectKey: "media/original/33333333-3333-4333-8333-333333333333/original.mp4", Status: media.AssetStatusUploaded, Metadata: map[string]string{"gps": "redacted-dev-fixture"}}})
+	processor := jobs.Processor{Queue: queue, Logger: logger, Handler: media.JobHandler{
+		Processor:     media.Processor{Catalog: catalog},
+		Transcription: media.TranscriptionProcessor{Catalog: catalog, Transcriber: media.StaticTranscriber{Text: "Dev fixture transcript", Confidence: 0.9, ModelName: "static-dev-fixture", Locale: "en"}},
+		Moderation:    media.ModerationProcessor{Catalog: catalog, Scanner: media.StaticSafetyScanner{RiskLevel: media.RiskLow, ScannerName: "static-dev-fixture"}},
+	}}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	for {
