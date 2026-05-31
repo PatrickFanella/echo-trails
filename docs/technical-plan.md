@@ -319,6 +319,13 @@ Testing requirements before beta:
 - Transcripts/waveforms/thumbnails.
 - Pending/status lifecycle.
 
+Phase 2A/B skeleton includes migration `apps/api/db/migrations/0002_media_lifecycle_spine.*.sql`
+for upload lifecycle, transcripts, and moderation reviews, plus a deterministic
+worker job skeleton under `apps/worker` for `process_media`,
+`generate_transcript`, and `scan_media_safety`. Real Redis reservation,
+presigned-object verification, transcription engines, media transforms, and
+moderation scanners remain later work.
+
 ### Phase 3: iOS clean rebuild
 
 - New SwiftUI project.
