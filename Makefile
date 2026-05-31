@@ -168,13 +168,11 @@ openapi-check: ## Run OpenAPI checks when the contract package is scaffolded
 		echo 'skip OpenAPI checks: packages/openapi/ not present yet'; \
 	fi
 
-swift-check: ## Run Swift/Xcode checks on macOS and skip safely elsewhere
-	@if [ "$$(uname -s)" = "Darwin" ]; then \
-		if [ -d "$(IOS_PROJECT)" ]; then \
-			xcodebuild test -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)"; \
-		else \
-			echo 'skip Swift checks: iOS project not present yet'; \
-		fi; \
+swift-check: ## Run Swift/Xcode checks when local tooling is available
+	@if [ -d "$(IOS_PROJECT)" ] && [ "$$(uname -s)" = "Darwin" ]; then \
+		xcodebuild test -project "$(IOS_PROJECT)" -scheme "$(IOS_SCHEME)" -destination "$(IOS_DESTINATION)"; \
+	elif [ -f apps/ios/Package.swift ] && command -v swift >/dev/null 2>&1; then \
+		swift test --package-path apps/ios; \
 	else \
-		echo 'skip Swift/Xcode checks: non-macOS runner'; \
+		echo 'skip Swift checks: Swift toolchain or iOS project not available'; \
 	fi
