@@ -16,13 +16,17 @@ Current scope is a Swift Package shell only:
 - deep-link parsing contracts for Places, Echoes, profiles, and upload status
 - screen descriptors with titles, accessibility label seeds, required API paths, and auth metadata
 - Linux-safe boundary checks that forbid SwiftUI/MapKit/SwiftData/AuthServices/Security imports until Xcode-scoped issues
+- auth/session contract descriptors for email code, Apple Sign-In exchange, token redaction, and Keychain-ready storage seams
 - Phase 3 contract descriptors for Map, Explore, create flow, SwiftData-ready cache/outbox schema, media composer, Profile/Activity, and accessibility audit surfaces
 
-No auth, Keychain storage, SwiftData, runtime networking, MapKit UI, media composer, or upload UI belongs in this baseline issue.
+No runtime auth UI, Keychain storage implementation, SwiftData, runtime networking, MapKit UI, media composer, or upload UI belongs in this baseline issue.
 
 Phase 3 contracts are intentionally data-only. They describe eventual UI state,
 validation, accessibility, and API paths without importing Apple UI/runtime
 frameworks or touching the generated prototype under repository-level `ios/`.
+Auth contracts are data-only: they reference email/Apple/session endpoints,
+redact token previews, and describe Keychain-ready storage without importing
+AuthenticationServices or Security.
 
 Verification:
 

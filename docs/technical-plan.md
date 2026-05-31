@@ -385,6 +385,13 @@ Foundation and deterministic Python boundary checks; actual SwiftUI screens,
 MapKit, SwiftData models, media pickers, runtime networking, Keychain/auth flows,
 and Xcode UI smoke tests remain deferred to a macOS-capable implementation pass.
 
+Current scoped implementation target for #35 finishes Phase 3 on Linux by adding
+pure Swift auth/session contracts only: email code request/verify descriptors,
+Apple token exchange descriptors, redacted session token descriptors, and a
+Keychain-ready storage seam. It intentionally does not import
+AuthenticationServices or Security, render login UI, persist tokens, or perform
+runtime networking until a macOS/Xcode-capable pass can verify those integrations.
+
 ### Phase 3: iOS clean rebuild
 
 - New SwiftUI project.

@@ -41,6 +41,8 @@ REQUIRED_SNIPPETS = {
     SOURCES / "ActivityContracts.swift": ["ActivityItemDescriptor", "NotificationPreviewPolicy", "ModerationActivityDescriptor", "OutboxActivityDescriptor"],
     SOURCES / "AccessibilityContracts.swift": ["AccessibilityDescriptor", "AccessibilityAuditRule", "AccessibilityAuditResult", "PhaseThreeAccessibilityCatalog"],
     SOURCES / "ContractPath.swift": ["safeSegment", "placeEchoes", "userProfile"],
+    SOURCES / "AuthContracts.swift": ["AuthenticationMethod", "EmailAuthenticationRequest", "AppleAuthenticationRequest", "SessionTokenDescriptor", "SessionStorageDescriptor", "logsRawTokens"],
+    TESTS / "AuthContractsTests.swift": ["testEmailAuthenticationRequestUsesAuthPathsAndValidation", "testSessionTokenDescriptorRedactsAndExpires", "testAuthenticationFlowUsesKeychainDescriptorAndNoTokenLogging"],
 }
 
 
@@ -59,7 +61,7 @@ def main() -> int:
         text = swift_file.read_text(encoding="utf-8")
         match = FORBIDDEN_IMPORT_PATTERN.search(text)
         if match:
-            print(f"forbidden framework import in #36 navigation shell: {swift_file}: {match.group(0).strip()}", file=sys.stderr)
+            print(f"forbidden framework import in Linux-verifiable iOS contract layer: {swift_file}: {match.group(0).strip()}", file=sys.stderr)
             return 1
 
     prototype_root = ROOT.parents[1] / "ios"
