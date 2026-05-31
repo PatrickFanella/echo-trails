@@ -1,8 +1,15 @@
 # EchoTrails Admin Web
 
-Target location for the React/Vite admin web app and placeholder for future EchoTrails moderation and operations workflows.
+React/Vite admin web app for EchoTrails moderation and operations workflows.
 
-This app will support moderation, reports, places, users, audit review, and operational workflows for the beta product.
+Current Phase 4 scope is a non-mutating fixture workflow:
+
+- authenticated shell shape with deterministic role guards
+- moderation queue/detail/action-intent placeholders
+- Places review list with boundary-sensitive override hints
+- audit labels for future server-side moderation writes
+
+It does not implement real auth, API writes, DB persistence, sanctions, appeals, or production moderation decisions yet.
 
 ## Install and run
 
@@ -32,4 +39,4 @@ npm run build
 npm test -- --run
 ```
 
-For a manual UI smoke check, start `npm run dev` and confirm the page renders the “EchoTrails Admin” placeholder.
+For a manual UI smoke check, start `npm run dev` and confirm the page renders “EchoTrails Admin”, role-gated navigation, “Moderation queue”, and “Places review”.

@@ -419,6 +419,12 @@ records. This does not add DB persistence, ranking, APNs delivery, abuse scoring
 admin adjudication, Reply screenshot rendering, or iOS social UI; those remain
 separate Phase 4/5 implementation passes.
 
+Current scoped implementation target for #49-#51 is a Linux-verifiable admin web
+fixture workflow in `apps/admin-web`. It adds deterministic role-gated shell
+navigation, moderation queue/action-intent placeholders, and Places review
+placeholders for boundary-sensitive overrides. It does not add real auth, API
+writes, DB persistence, sanctions, appeals, or production moderation decisions.
+
 ### Phase 5: Beta readiness
 
 - Invite codes.

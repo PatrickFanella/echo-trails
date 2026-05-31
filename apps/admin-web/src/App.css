@@ -17,12 +17,52 @@ body {
 }
 
 .card {
-  max-width: 44rem;
+  max-width: 56rem;
   border: 1px solid rgba(23, 32, 27, 0.14);
   border-radius: 1.5rem;
   background: rgba(255, 255, 255, 0.8);
   padding: 2rem;
   box-shadow: 0 1rem 3rem rgba(23, 32, 27, 0.12);
+}
+
+.nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.pill {
+  border: 1px solid rgba(23, 32, 27, 0.18);
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  background: #eef5ed;
+  color: #233129;
+  font-weight: 700;
+}
+
+.panel {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(23, 32, 27, 0.14);
+  padding-top: 1rem;
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.panel ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: #465149;
+  line-height: 1.6;
+}
+
+.locked {
+  margin: 0;
+  color: #7b3f2d;
+  font-weight: 700;
 }
 
 .eyebrow {
