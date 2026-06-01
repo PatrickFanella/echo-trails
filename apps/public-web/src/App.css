@@ -51,3 +51,43 @@ h1 {
   padding: 0.55rem 0.8rem;
   font-weight: 700;
 }
+
+.cta {
+  display: inline-flex;
+  margin: 0.75rem 0 1rem;
+  border-radius: 999px;
+  background: #1c2430;
+  color: #f4efe6;
+  padding: 0.75rem 1rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.preview,
+.policy-card {
+  border: 1px solid rgba(28, 36, 48, 0.14);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 1rem;
+}
+
+.preview {
+  margin-top: 1rem;
+}
+
+.policy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.policy-card h2,
+.preview h2 {
+  margin: 0 0 0.5rem;
+}
+
+.review-note {
+  color: #8a4b2f;
+  font-weight: 800;
+}

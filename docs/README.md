@@ -14,6 +14,7 @@ EchoTrails documentation is split by purpose.
 - `open-pilot.md`
 - `labels.md`
 - `runbooks/README.md`
+- `security/threat-model.md`
 
 ## Plans
 

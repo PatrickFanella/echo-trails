@@ -1,0 +1,10 @@
+{
+  "title": "EchoTrails beta readiness",
+  "panels": [
+    {"name": "API readiness", "query": "up{job=\"echotrails-api\"}"},
+    {"name": "HTTP errors", "query": "rate(http_requests_total{status=~\"5..\"}[5m])"},
+    {"name": "Worker failures", "query": "echotrails_worker_failures_total"},
+    {"name": "Backup freshness", "query": "echotrails_backup_age_seconds"}
+  ],
+  "privacy": "No tokens, exact private coordinates, email codes, or report bodies in labels."
+}

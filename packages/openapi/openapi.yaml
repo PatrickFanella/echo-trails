@@ -20,7 +20,10 @@
     {"name": "media"},
     {"name": "social"},
     {"name": "safety"},
-    {"name": "notifications"}
+    {"name": "notifications"},
+    {"name": "privacy"},
+    {"name": "analytics"},
+    {"name": "beta"}
   ],
   "paths": {
     "/health": {
@@ -79,6 +82,30 @@
           "401": {"$ref": "#/components/responses/ErrorResponse"}
         }
       }
+    },
+    "/consent/current": {
+      "get": {"tags": ["privacy"], "operationId": "getCurrentConsent", "summary": "Get current beta terms/privacy/disclosure versions", "responses": {"200": {"description": "Current consent versions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConsentVersion"}}}}}}
+    },
+    "/consent/acceptances": {
+      "post": {"tags": ["privacy"], "operationId": "acceptConsent", "summary": "Record a user's accepted consent versions", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConsentAcceptanceRequest"}}}}, "responses": {"202": {"description": "Consent accepted"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/privacy/exports": {
+      "post": {"tags": ["privacy"], "operationId": "requestPrivacyExport", "summary": "Queue async privacy export", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyExportRequest"}}}}, "responses": {"202": {"description": "Export queued", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyJobStatus"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/privacy/exports/{jobId}": {
+      "get": {"tags": ["privacy"], "operationId": "getPrivacyExport", "summary": "Get privacy export job status", "parameters": [{"$ref": "#/components/parameters/JobId"}], "responses": {"200": {"description": "Export status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyJobStatus"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/privacy/deletions": {
+      "post": {"tags": ["privacy"], "operationId": "requestAccountDeletion", "summary": "Queue async account deletion", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AccountDeletionRequest"}}}}, "responses": {"202": {"description": "Deletion queued", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyJobStatus"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/analytics/opt-out": {
+      "post": {"tags": ["analytics"], "operationId": "setAnalyticsOptOut", "summary": "Set first-party analytics opt-out", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnalyticsOptOutRequest"}}}}, "responses": {"202": {"description": "Opt-out state accepted"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/analytics/events": {
+      "post": {"tags": ["analytics"], "operationId": "recordAnalyticsEvent", "summary": "Record privacy-safe first-party analytics event", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnalyticsEventEnvelope"}}}}, "responses": {"202": {"description": "Event accepted"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/beta/access": {
+      "post": {"tags": ["beta"], "operationId": "evaluateBetaAccess", "summary": "Evaluate invite code and city beta gate", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/InviteCodeRequest"}}}}, "responses": {"200": {"description": "Beta access state", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BetaAccessResponse"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
     },
     "/auth/email/start": {
       "post": {
@@ -407,6 +434,7 @@
       "EchoId": {"name": "echoId", "in": "path", "required": true, "schema": {"type": "string"}},
       "IdempotencyKey": {"name": "Idempotency-Key", "in": "header", "required": false, "schema": {"type": "string", "minLength": 1, "maxLength": 255}},
       "IncludeRestricted": {"name": "include_restricted", "in": "query", "required": false, "schema": {"type": "boolean", "default": false}},
+      "JobId": {"name": "jobId", "in": "path", "required": true, "schema": {"type": "string"}},
       "Latitude": {"name": "lat", "in": "query", "required": true, "schema": {"type": "number", "minimum": -90, "maximum": 90}},
       "Limit": {"name": "limit", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20}},
       "Longitude": {"name": "lon", "in": "query", "required": true, "schema": {"type": "number", "minimum": -180, "maximum": 180}},
@@ -499,6 +527,15 @@
           "published_at": {"type": "string", "format": "date-time"}
         }
       },
+      "ConsentVersion": {"type": "object", "required": ["terms_version", "privacy_version", "disclosure", "effective_at"], "properties": {"terms_version": {"type": "string"}, "privacy_version": {"type": "string"}, "disclosure": {"type": "string"}, "effective_at": {"type": "string", "format": "date-time"}}},
+      "ConsentAcceptanceRequest": {"type": "object", "required": ["terms_version", "privacy_version"], "properties": {"terms_version": {"type": "string"}, "privacy_version": {"type": "string"}}, "description": "Authenticated user is derived from session, not request body."},
+      "PrivacyExportRequest": {"type": "object", "properties": {}, "description": "Authenticated user is derived from session, not request body."},
+      "AccountDeletionRequest": {"type": "object", "properties": {"reason": {"type": "string"}}, "description": "Authenticated user is derived from session, not request body."},
+      "PrivacyJobStatus": {"type": "object", "required": ["job_id", "user_id", "kind", "status", "requested_at"], "properties": {"job_id": {"type": "string"}, "user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["export", "delete"]}, "status": {"type": "string", "enum": ["queued", "processing", "ready", "completed", "failed"]}, "requested_at": {"type": "string", "format": "date-time"}, "download_url": {"type": "string"}}},
+      "AnalyticsOptOutRequest": {"type": "object", "required": ["opt_out"], "properties": {"opt_out": {"type": "boolean"}}, "description": "Authenticated user is derived from session, not request body."},
+      "AnalyticsEventEnvelope": {"type": "object", "additionalProperties": false, "required": ["event_name", "allows_exact_coordinates"], "properties": {"user_id": {"type": "string"}, "event_name": {"type": "string"}, "place_id": {"type": "string"}, "properties": {"type": "object", "additionalProperties": false, "properties": {"surface": {"type": "string"}, "action": {"type": "string"}, "result": {"type": "string"}, "place_id": {"type": "string"}}}, "allows_exact_coordinates": {"type": "boolean", "const": false}}},
+      "InviteCodeRequest": {"type": "object", "required": ["email", "city"], "properties": {"email": {"type": "string", "format": "email"}, "code": {"type": "string"}, "city": {"type": "string"}}},
+      "BetaAccessResponse": {"type": "object", "required": ["state", "message"], "properties": {"state": {"type": "string", "enum": ["invite_required", "city_unavailable", "waitlist", "accepted"]}, "city": {"type": "string"}, "message": {"type": "string"}}},
       "ReactionRequest": {"type": "object", "required": ["user_id", "kind"], "properties": {"user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["heart", "fire", "sad", "laugh", "clap", "mind_blown"]}}},
       "ReactionSummary": {"type": "object", "required": ["echo_id", "totals"], "properties": {"echo_id": {"type": "string"}, "totals": {"type": "object", "additionalProperties": {"type": "integer"}}}},
       "ReplyRequest": {"type": "object", "required": ["user_id", "body"], "properties": {"user_id": {"type": "string"}, "body": {"type": "string", "minLength": 1, "maxLength": 500}, "reply_to": {"type": "string"}}},

@@ -2,7 +2,14 @@
 
 Target location for the minimal React/Vite public web app.
 
-This app will provide share previews, legal pages, and public calls to action without becoming the primary EchoTrails client.
+This app provides Linux-verifiable beta public fixtures:
+
+- share preview content
+- TestFlight / invite call to action
+- terms, privacy, and hosting/safety disclosure page metadata
+- explicit notice that full public browsing is not available during beta
+
+Policy text is template-only and requires legal review before public launch.
 
 ## Install and run
 
@@ -32,4 +39,4 @@ npm run build
 npm test -- --run
 ```
 
-For a manual UI smoke check, start `npm run dev` and confirm the page renders the “EchoTrails place-stories” placeholder.
+For a manual UI smoke check, start `npm run dev` and confirm the page renders “EchoTrails place-stories”, “Request TestFlight invite”, share preview copy, and the three policy cards.

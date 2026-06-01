@@ -19,6 +19,7 @@ Current scope is a Swift Package shell only:
 - auth/session contract descriptors for email code, Apple Sign-In exchange, token redaction, and Keychain-ready storage seams
 - Phase 3 contract descriptors for Map, Explore, create flow, SwiftData-ready cache/outbox schema, media composer, Profile/Activity, and accessibility audit surfaces
 - Phase 4 social interaction descriptors for reactions, replies, stitches, reports, blocks, hides, and authenticated action metadata
+- Phase 5 beta access descriptors for invite-required, city-unavailable, waitlist, and accepted states
 
 No runtime auth UI, Keychain storage implementation, SwiftData, runtime networking, MapKit UI, media composer, or upload UI belongs in this baseline issue.
 

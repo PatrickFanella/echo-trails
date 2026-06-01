@@ -441,6 +441,13 @@ moderation decisions.
 - Monitoring/alerts.
 - TestFlight beta.
 
+Current scoped implementation target for #53-#62 is a Linux-verifiable beta
+readiness package. It includes public web share/CTA/policy fixtures, consent and
+privacy/analytics/beta access API contracts, deployment/backup/monitoring
+runbooks, a pre-beta threat model, and a TestFlight checklist. It does not claim
+legal approval, GDPR certification, live deployment, live backups, live alerts,
+Apple signing, App Store Connect work, or a real TestFlight upload.
+
 ## Immediate implementation plan
 
 First implementation should be scaffolding only, not feature work.

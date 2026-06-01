@@ -45,6 +45,8 @@ REQUIRED_SNIPPETS = {
     TESTS / "AuthContractsTests.swift": ["testEmailAuthenticationRequestUsesAuthPathsAndValidation", "testSessionTokenDescriptorRedactsAndExpires", "testAuthenticationFlowUsesKeychainDescriptorAndNoTokenLogging"],
     SOURCES / "SocialContracts.swift": ["SocialReactionType", "ReplyComposerDescriptor", "StitchComposerDescriptor", "ReportFlowDescriptor", "SafetyActionDescriptor", "SocialActionRequestDescriptor"],
     TESTS / "SocialContractsTests.swift": ["testReactionTypesAndPathMatchOpenAPI", "testRepliesAreOneLevelAndBounded", "testReportsAreAnonymousAndHideImmediately", "testBlocksAndHidesUseSafetyPathsAndFilteringSemantics"],
+    SOURCES / "BetaAccessContracts.swift": ["BetaAccessState", "BetaAccessDescriptor", "inviteRequired", "cityUnavailable"],
+    TESTS / "BetaAccessContractsTests.swift": ["testBetaAccessStatesAndPath"],
 }
 
 
