@@ -53,7 +53,7 @@ lint: ## Run lightweight lint checks
 	@for app in $(TS_APPS); do \
 		if [ -f "$$app/package.json" ]; then \
 			echo "TypeScript lint/build: $$app"; \
-			(cd "$$app" && npm run lint && npm run build); \
+			(cd "$$app" && npm ci && npm run lint && npm run build); \
 		else \
 			echo "skip TypeScript lint/build: $$app/package.json not present yet"; \
 		fi; \
@@ -71,7 +71,7 @@ test: ## Run deterministic tests available on this host
 	@for app in $(TS_APPS); do \
 		if [ -f "$$app/package.json" ]; then \
 			echo "TypeScript test: $$app"; \
-			(cd "$$app" && npm test -- --run); \
+			(cd "$$app" && npm ci && npm test -- --run); \
 		else \
 			echo "skip TypeScript tests: $$app/package.json not present yet"; \
 		fi; \
@@ -148,7 +148,7 @@ ts-check: ## Run TypeScript/web checks when package.json files are scaffolded
 	@for app in $(TS_APPS); do \
 		if [ -f "$$app/package.json" ]; then \
 			echo "TypeScript check: $$app"; \
-			(cd "$$app" && npm run lint && npm run build && npm test -- --run); \
+			(cd "$$app" && npm ci && npm run lint && npm run build && npm test -- --run); \
 		else \
 			echo "skip TypeScript checks: $$app/package.json not present yet"; \
 		fi; \

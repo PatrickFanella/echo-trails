@@ -3,7 +3,11 @@
   "info": {
     "title": "EchoTrails API",
     "version": "0.1.0",
-    "description": "Baseline contract for EchoTrails public API surfaces. Product detail remains in docs/PRD.md and docs/technical-plan.md."
+    "description": "Baseline contract for EchoTrails public API surfaces. Some Phase 4/5 paths are forward contract fixtures and are not wired in the runnable API until their implementation pass. Product detail remains in docs/PRD.md and docs/technical-plan.md."
+  },
+  "x-echotrails-runtime-status": {
+    "wiredInApiBinary": ["health", "auth", "places", "media"],
+    "contractOnlyUntilLaterPass": ["social", "safety", "notifications", "privacy", "analytics", "beta"]
   },
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "servers": [

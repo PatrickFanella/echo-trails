@@ -12,8 +12,8 @@ if (!command) {
 const binary = join(process.cwd(), "node_modules", ".bin", command);
 
 if (!existsSync(binary)) {
-  console.log(`skip ${command}: dependencies are not installed; run npm install or pnpm install in this app`);
-  process.exit(0);
+  console.error(`missing ${command}: dependencies are not installed; run npm ci in this app`);
+  process.exit(1);
 }
 
 const result = spawnSync(binary, args, { stdio: "inherit" });

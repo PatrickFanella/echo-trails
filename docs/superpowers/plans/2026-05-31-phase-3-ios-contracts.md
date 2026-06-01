@@ -9,6 +9,8 @@
 
 **Goal:** Close #37-#43 with Linux-verifiable iOS contract models, not runtime UI.
 
+**Status:** Complete. Closed as contract-only Swift Package work; see `docs/technical-plan.md` Phase 3 scoped implementation notes. Verified by repository baseline checks.
+
 **Architecture:** Add pure Foundation Swift data contracts under `apps/ios/Sources/EchoTrailsShell` plus XCTest specs for hosts with Swift. Linux truth comes from `make verify` and `apps/ios/Scripts/check-navigation-boundaries.py`, which forbids Apple UI/runtime framework imports and checks required contract files/snippets.
 
 **Tech Stack:** Swift Package, Foundation, XCTest, Python boundary checker, Makefile verify.
@@ -23,11 +25,11 @@
 
 ## Tasks
 
-- [ ] #37 Map contracts: coordinates, viewport, Place markers/detail descriptors, public precision, API path references.
-- [ ] #38 Explore contracts: query/scope/section/ranking/empty states.
-- [ ] #39 Create flow contracts: draft, content mode, validation, proof preflight, create steps.
-- [ ] #40 Cache/outbox contracts: SwiftData-ready descriptors, outbox states, retry/conflict policy, schema version.
-- [ ] #41 Media composer contracts: attachment, limits, validation, upload intent/status descriptors.
-- [ ] #42 Profile/Activity contracts: public/private profile split, activity rows, privacy-safe preview policy.
-- [ ] #43 Accessibility contracts: audit rules/results and surface descriptors for Phase 3 contracts.
-- [ ] Verification: `rtk make fmt`, `rtk make verify`, `rtk git diff --check`; run `swift test --package-path apps/ios` only when Swift is installed.
+- [x] #37 Map contracts: coordinates, viewport, Place markers/detail descriptors, public precision, API path references.
+- [x] #38 Explore contracts: query/scope/section/ranking/empty states.
+- [x] #39 Create flow contracts: draft, content mode, validation, proof preflight, create steps.
+- [x] #40 Cache/outbox contracts: SwiftData-ready descriptors, outbox states, retry/conflict policy, schema version.
+- [x] #41 Media composer contracts: attachment, limits, validation, upload intent/status descriptors.
+- [x] #42 Profile/Activity contracts: public/private profile split, activity rows, privacy-safe preview policy.
+- [x] #43 Accessibility contracts: audit rules/results and surface descriptors for Phase 3 contracts.
+- [x] Verification: `rtk make fmt`, `rtk make verify`, `rtk git diff --check`; run `swift test --package-path apps/ios` only when Swift is installed.

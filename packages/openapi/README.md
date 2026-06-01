@@ -2,6 +2,8 @@
 
 `openapi.yaml` is the baseline machine-readable API contract for Go, Swift, and TypeScript integration work and the target location for generated client checks.
 
+It includes both routes wired in the current runnable API binary and forward contract fixtures for later phases. The `x-echotrails-runtime-status` extension records which tag groups are runtime-wired now versus contract-only until a later implementation pass.
+
 The file is JSON-compatible YAML and is validated with a dependency-free lint script. Contract path constants are generated for TypeScript and Swift drift checks:
 
 ```bash

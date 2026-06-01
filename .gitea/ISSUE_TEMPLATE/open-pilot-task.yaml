@@ -69,7 +69,7 @@ body:
         - Do not merge the resulting PR automatically.
         - Do not add `agent:queued`; that is a human approval step.
     validations:
-      required: false
+      required: true
 
   - type: checkboxes
     id: queue-checklist
