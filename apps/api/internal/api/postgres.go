@@ -120,21 +120,44 @@ func (s *PostgresStore) ConsumeAuthRequest(ctx context.Context, id, submittedHas
 }
 
 func (s *PostgresStore) FindOrCreateUserByEmail(ctx context.Context, email string) (User, error) {
-	var user User
-	err := s.pool.QueryRow(ctx, `SELECT id::text, email FROM users WHERE email = $1 AND status <> 'deleted'`, email).Scan(&user.ID, &user.Email)
-	if err == nil {
-		return user, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
 		return User{}, err
 	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var user User
 	id, err := uuidv7.New()
 	if err != nil {
 		return User{}, err
 	}
-	err = s.pool.QueryRow(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)
+	err = tx.QueryRow(ctx, `INSERT INTO users (id, email) VALUES ($1, $2)
 		ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email RETURNING id::text, email, role, status`, id.String(), email).Scan(&user.ID, &user.Email, &user.Role, &user.Status)
-	return user, err
+	if err != nil {
+		return User{}, err
+	}
+	if user.Status == "deleted" {
+		return User{}, errors.New("deleted user cannot sign in")
+	}
+	identityID, err := uuidv7.New()
+	if err != nil {
+		return User{}, err
+	}
+	identityResult, err := tx.Exec(ctx, `INSERT INTO auth_identities
+		(id, user_id, provider, provider_subject, email, verified_at)
+		VALUES ($1, $2, 'email', $3, $3, now())
+		ON CONFLICT (provider, provider_subject) DO UPDATE
+		SET email = EXCLUDED.email, verified_at = coalesce(auth_identities.verified_at, EXCLUDED.verified_at), updated_at = now()
+		WHERE auth_identities.user_id = EXCLUDED.user_id`, identityID.String(), user.ID, email)
+	if err != nil {
+		return User{}, err
+	}
+	if identityResult.RowsAffected() != 1 {
+		return User{}, errors.New("email identity belongs to another user")
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return User{}, err
+	}
+	return user, nil
 }
 
 func (s *PostgresStore) CreateSession(ctx context.Context, session Session) error {

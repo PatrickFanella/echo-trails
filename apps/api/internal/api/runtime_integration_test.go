@@ -15,12 +15,62 @@ import (
 	"testing"
 	"time"
 
+	"git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/bootstrapadmin"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+func TestIntegrationVerifiedEmailCanBootstrapInitialAdmin(t *testing.T) {
+	if os.Getenv("ECHOTRAILS_INTEGRATION") != "1" {
+		t.Skip("set ECHOTRAILS_INTEGRATION=1")
+	}
+	ctx := context.Background()
+	pool, err := pgxpool.New(ctx, os.Getenv("ECHOTRAILS_INTEGRATION_DATABASE_URL"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	const email = "field-bootstrap@invalid.example"
+	cleanup := func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM audit_logs WHERE action = 'initial_admin_bootstrap' AND actor_user_id IN (SELECT id FROM users WHERE email = $1)`, email)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM auth_identities WHERE email = $1`, email)
+		_, _ = pool.Exec(context.Background(), `DELETE FROM users WHERE email = $1`, email)
+	}
+	cleanup()
+	defer cleanup()
+	store, err := NewPostgresStore(pool, []byte("integration-exact-location-key-32-bytes"), []byte("integration-push-token-key-at-least-32"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	user, err := store.FindOrCreateUserByEmail(ctx, email)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := bootstrapadmin.PromoteInitialAdmin(ctx, pool, email, "field_demo_initial_admin", time.Now().UTC())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.UserID != user.ID || result.AlreadyAdmin {
+		t.Fatalf("bootstrap result = %+v user=%s", result, user.ID)
+	}
+	result, err = bootstrapadmin.PromoteInitialAdmin(ctx, pool, email, "field_demo_initial_admin", time.Now().UTC())
+	if err != nil || !result.AlreadyAdmin {
+		t.Fatalf("idempotent bootstrap result=%+v err=%v", result, err)
+	}
+	var identities, audits int
+	if err = pool.QueryRow(ctx, `SELECT count(*) FROM auth_identities WHERE user_id = $1 AND provider = 'email' AND verified_at IS NOT NULL`, user.ID).Scan(&identities); err != nil {
+		t.Fatal(err)
+	}
+	if err = pool.QueryRow(ctx, `SELECT count(*) FROM audit_logs WHERE actor_user_id = $1 AND action = 'initial_admin_bootstrap'`, user.ID).Scan(&audits); err != nil {
+		t.Fatal(err)
+	}
+	if identities != 1 || audits != 1 {
+		t.Fatalf("verified identities=%d bootstrap audits=%d", identities, audits)
+	}
+}
 
 func TestIntegrationSMTPFixture(t *testing.T) {
 	if os.Getenv("ECHOTRAILS_INTEGRATION") != "1" {
