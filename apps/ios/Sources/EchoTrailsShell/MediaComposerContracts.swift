@@ -57,7 +57,7 @@ public struct UploadIntent: Equatable, Sendable {
     public init(echoID: String, attachment: MediaAttachmentDescriptor) {
         self.echoID = echoID
         self.attachment = attachment
-        self.uploadAPIPath = "/media/uploads"
+        self.uploadAPIPath = OpenAPIPaths.createMediaUpload(echoId: echoID)
     }
 }
 
@@ -73,6 +73,6 @@ public struct UploadStatusDescriptor: Equatable, Sendable {
     }
 
     public var usesOpaqueIdentifiers: Bool {
-        uploadID.hasPrefix("upl_") && objectKey.hasPrefix("media/original/")
+        (uploadID.hasPrefix("upl_") || UUID(uuidString: uploadID) != nil) && objectKey.hasPrefix("media/original/")
     }
 }

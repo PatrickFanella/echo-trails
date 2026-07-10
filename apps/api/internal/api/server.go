@@ -1,12 +1,20 @@
 package api
 
 import (
+	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
 	"time"
+
+	appleauth "git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/auth/apple"
+	"git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/primitives/pagination"
+	"git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/primitives/uuidv7"
 )
 
 type Config struct {
@@ -15,6 +23,7 @@ type Config struct {
 	Sender     EmailSender
 	Clock      clock
 	CodePepper []byte
+	Apple      *appleauth.Service
 }
 
 type Server struct {
@@ -23,6 +32,7 @@ type Server struct {
 	sender   EmailSender
 	clock    clock
 	pepper   []byte
+	apple    *appleauth.Service
 	mux      *http.ServeMux
 }
 
@@ -46,7 +56,7 @@ func NewServer(cfg Config) *Server {
 		}
 		cfg.CodePepper = pepper
 	}
-	s := &Server{store: cfg.Store, profiles: cfg.Profiles, sender: cfg.Sender, clock: cfg.Clock, pepper: cfg.CodePepper, mux: http.NewServeMux()}
+	s := &Server{store: cfg.Store, profiles: cfg.Profiles, sender: cfg.Sender, clock: cfg.Clock, pepper: cfg.CodePepper, apple: cfg.Apple, mux: http.NewServeMux()}
 	s.routes()
 	return s
 }
@@ -56,11 +66,13 @@ func (s *Server) Router() http.Handler { return s.mux }
 func (s *Server) routes() {
 	s.mux.HandleFunc("POST /auth/email/start", s.handleStart)
 	s.mux.HandleFunc("POST /auth/email/verify", s.handleVerify)
+	s.mux.HandleFunc("POST /auth/apple", s.handleApple)
 	s.mux.HandleFunc("POST /sessions/refresh", s.handleRefresh)
 	s.mux.HandleFunc("POST /sessions/logout", s.handleLogout)
 	s.mux.HandleFunc("GET /me", s.handleGetMe)
 	s.mux.HandleFunc("PATCH /me", s.handlePatchMe)
 	s.mux.HandleFunc("GET /users/{handle}", s.handleGetPublicProfile)
+	s.mux.HandleFunc("GET /users/{handle}/echoes", s.handleGetPublicProfileEchoes)
 }
 
 func (s *Server) writeJSON(w http.ResponseWriter, code int, v any) {
@@ -95,11 +107,25 @@ func (s *Server) handleGetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handlePatchMe(w http.ResponseWriter, r *http.Request) {
-	userID, email, ok := authenticatedUser(r)
+	userID, _, ok := authenticatedUser(r)
 	if !ok {
 		s.writeError(w, http.StatusUnauthorized, "unauthorized", "Unauthorized")
 		return
 	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" || len(idempotencyKey) > 200 {
+		s.writeError(w, http.StatusBadRequest, "idempotency_key_required", "Idempotency-Key is required")
+		return
+	}
+	if store, production := s.store.(mutationIdempotencyStore); production {
+		executeIdempotentMutation(w, r, userID, idempotencyKey, store, s.clock.Now(), s.handlePatchMeCore)
+		return
+	}
+	s.handlePatchMeCore(w, r)
+}
+
+func (s *Server) handlePatchMeCore(w http.ResponseWriter, r *http.Request) {
+	userID, email, _ := authenticatedUser(r)
 	var req UpsertProfileRequest
 	if err := decodeJSON(r, &req); err != nil {
 		s.writeError(w, http.StatusBadRequest, "bad_request", "Bad request")
@@ -134,6 +160,45 @@ func (s *Server) handleGetPublicProfile(w http.ResponseWriter, r *http.Request) 
 	s.writeJSON(w, http.StatusOK, toPublicProfile(profile))
 }
 
+type publicProfileEchoRepository interface {
+	ListVisiblePublishedByAuthorHandlePage(context.Context, string, string, string, int) (EchoRecordPage, error)
+}
+
+func (s *Server) handleGetPublicProfileEchoes(w http.ResponseWriter, r *http.Request) {
+	viewerID, _, _ := authenticatedUser(r)
+	handle, err := ValidateHandle(r.PathValue("handle"))
+	if err != nil {
+		s.writeError(w, http.StatusBadRequest, "invalid_handle", "Invalid handle")
+		return
+	}
+	if _, found, profileErr := s.profiles.GetProfileByHandle(r.Context(), handle); profileErr != nil {
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
+		return
+	} else if !found {
+		s.writeError(w, http.StatusNotFound, "profile_not_found", "Profile not found")
+		return
+	}
+	repository, ok := s.store.(publicProfileEchoRepository)
+	if !ok {
+		s.writeJSON(w, http.StatusOK, map[string]any{"echoes": []EchoResponse{}, "next_cursor": ""})
+		return
+	}
+	page, err := repository.ListVisiblePublishedByAuthorHandlePage(r.Context(), handle, viewerID, r.URL.Query().Get("cursor"), parseInt(r.URL.Query().Get("limit"), 20))
+	if err != nil {
+		if errors.Is(err, pagination.ErrInvalidCursor) {
+			s.writeError(w, http.StatusBadRequest, "invalid_cursor", "Invalid pagination cursor")
+		} else {
+			s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
+		}
+		return
+	}
+	echoes := make([]EchoResponse, 0, len(page.Records))
+	for _, record := range page.Records {
+		echoes = append(echoes, toEchoResponse(record, ""))
+	}
+	s.writeJSON(w, http.StatusOK, map[string]any{"echoes": echoes, "next_cursor": page.NextCursor})
+}
+
 func authenticatedUser(r *http.Request) (userID, email string, ok bool) {
 	userID = strings.TrimSpace(r.Header.Get("X-EchoTrails-User-ID"))
 	if userID == "" {
@@ -158,35 +223,36 @@ func profileError(err error) (int, string, string) {
 func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 	var req StartEmailRequest
 	if err := decodeJSON(r, &req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		s.writeError(w, http.StatusBadRequest, "invalid_request", "Invalid email authentication request")
 		return
 	}
 	email, err := normalizeEmail(req.Email)
 	if err != nil {
-		http.Error(w, "invalid email", http.StatusBadRequest)
+		s.writeError(w, http.StatusBadRequest, "invalid_email", "Invalid email address")
 		return
 	}
-	requestID, err := newID("req_")
+	requestUUID, err := uuidv7.New()
 	if err != nil {
 		slog.Error("auth email start failed", "error", "request_id_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
+	requestID := requestUUID.String()
 	code, err := newCode()
 	if err != nil {
 		slog.Error("auth email start failed", "error", "code_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	expiresAt := s.clock.Now().Add(15 * time.Minute)
 	if err := s.store.CreateAuthRequest(r.Context(), AuthRequest{ID: requestID, Email: email, CodeHash: authCodeHash(s.pepper, code), ExpiresAt: expiresAt}); err != nil {
 		slog.Error("auth email start failed", "error", "store_create_auth_request_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	if err := s.sender.SendAuthCode(r.Context(), email, requestID, code, expiresAt); err != nil {
 		slog.Error("auth email start failed", "error", "email_send_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	slog.Info("auth email code queued", "request_id", requestID)
@@ -196,83 +262,117 @@ func (s *Server) handleStart(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleVerify(w http.ResponseWriter, r *http.Request) {
 	var req VerifyEmailRequest
 	if err := decodeJSON(r, &req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		s.writeError(w, http.StatusBadRequest, "invalid_request", "Invalid email verification request")
 		return
 	}
 	now := s.clock.Now()
 	ar, ok, err := s.store.ConsumeAuthRequest(r.Context(), req.RequestID, authCodeHash(s.pepper, req.Code), now)
 	if err != nil {
 		slog.Error("auth email verify failed", "error", "consume_request_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		s.writeError(w, http.StatusUnauthorized, "invalid_email_code", "Email code is invalid or expired")
 		return
 	}
 	user, err := s.store.FindOrCreateUserByEmail(r.Context(), ar.Email)
 	if err != nil {
 		slog.Error("auth email verify failed", "error", "find_or_create_user_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
-	sessionID, err := newID("ses_")
+	response, err := s.createSessionResponse(r.Context(), user.ID, req.DeviceName)
 	if err != nil {
-		slog.Error("auth email verify failed", "error", "session_id_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		slog.Error("auth email verify failed", "error", "create_session_failed")
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
+	}
+	slog.Info("auth email verified", "request_id", ar.ID, "user_id", user.ID, "session_id", response.SessionID)
+	s.writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) handleApple(w http.ResponseWriter, r *http.Request) {
+	if s.apple == nil {
+		s.writeError(w, http.StatusServiceUnavailable, "apple_auth_unavailable", "Sign in with Apple is unavailable")
+		return
+	}
+	var request struct {
+		IdentityToken string `json:"identity_token"`
+		DeviceName    string `json:"device_name,omitempty"`
+	}
+	if decodeJSON(r, &request) != nil || strings.TrimSpace(request.IdentityToken) == "" {
+		s.writeError(w, http.StatusBadRequest, "invalid_apple_token", "Invalid Apple identity token")
+		return
+	}
+	result, err := s.apple.SignIn(r.Context(), request.IdentityToken)
+	if err != nil {
+		s.writeError(w, http.StatusUnauthorized, "invalid_apple_token", "Invalid Apple identity token")
+		return
+	}
+	response, err := s.createSessionResponse(r.Context(), result.User.ID, request.DeviceName)
+	if err != nil {
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
+		return
+	}
+	s.writeJSON(w, http.StatusOK, response)
+}
+
+func (s *Server) createSessionResponse(ctx context.Context, userID, deviceName string) (VerifyEmailResponse, error) {
+	sessionUUID, err := uuidv7.New()
+	if err != nil {
+		return VerifyEmailResponse{}, err
 	}
 	refreshToken, err := newToken("rfr_")
 	if err != nil {
-		slog.Error("auth email verify failed", "error", "refresh_token_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
+		return VerifyEmailResponse{}, err
 	}
 	accessToken, err := newToken("act_")
 	if err != nil {
-		slog.Error("auth email verify failed", "error", "access_token_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
+		return VerifyEmailResponse{}, err
 	}
-	refreshExpires := s.clock.Now().Add(30 * 24 * time.Hour)
-	accessExpires := s.clock.Now().Add(15 * time.Minute)
-	if err := s.store.CreateSession(r.Context(), Session{ID: sessionID, UserID: user.ID, DeviceName: deviceNameOrDefault(req.DeviceName), RefreshTokenHash: codeHash(refreshToken), ExpiresAt: refreshExpires}); err != nil {
-		slog.Error("auth email verify failed", "error", "create_session_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
+	now := s.clock.Now()
+	refreshExpires := now.Add(30 * 24 * time.Hour)
+	accessExpires := now.Add(15 * time.Minute)
+	sessionID := sessionUUID.String()
+	if err = s.store.CreateSession(ctx, Session{ID: sessionID, UserID: userID, DeviceName: deviceNameOrDefault(deviceName), AccessTokenHash: codeHash(accessToken), AccessExpiresAt: accessExpires, RefreshTokenHash: codeHash(refreshToken), ExpiresAt: refreshExpires}); err != nil {
+		return VerifyEmailResponse{}, err
 	}
-	slog.Info("auth email verified", "request_id", ar.ID, "user_id", user.ID, "session_id", sessionID)
-	s.writeJSON(w, http.StatusOK, VerifyEmailResponse{UserID: user.ID, SessionID: sessionID, AccessToken: accessToken, RefreshToken: refreshToken, AccessTokenExpiresAt: accessExpires, RefreshTokenExpiresAt: refreshExpires})
+	return VerifyEmailResponse{UserID: userID, SessionID: sessionID, AccessToken: accessToken, RefreshToken: refreshToken, AccessTokenExpiresAt: accessExpires, RefreshTokenExpiresAt: refreshExpires}, nil
 }
 
 func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" || len(idempotencyKey) > 200 {
+		s.writeError(w, http.StatusBadRequest, "idempotency_key_required", "Idempotency-Key is required")
+		return
+	}
 	var req RefreshRequest
 	if err := decodeJSON(r, &req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		s.writeError(w, http.StatusBadRequest, "invalid_request", "Invalid session refresh request")
 		return
 	}
-	newRefresh, err := newToken("rfr_")
-	if err != nil {
-		slog.Error("session refresh failed", "error", "refresh_token_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	newAccess, err := newToken("act_")
-	if err != nil {
-		slog.Error("session refresh failed", "error", "access_token_generation_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
+	material := codeHash(req.RefreshToken) + ":" + idempotencyKey
+	newRefresh := deriveSessionToken("rfr_", s.pepper, "refresh:"+material)
+	newAccess := deriveSessionToken("act_", s.pepper, "access:"+material)
 	refreshExpires := s.clock.Now().Add(30 * 24 * time.Hour)
 	accessExpires := s.clock.Now().Add(15 * time.Minute)
-	sess, ok, err := s.store.RotateSessionRefreshToken(r.Context(), codeHash(req.RefreshToken), codeHash(newRefresh), refreshExpires, s.clock.Now())
+	refreshStore, supportsReplay := s.store.(IdempotentRefreshStore)
+	var sess Session
+	var ok bool
+	var err error
+	if supportsReplay {
+		sess, ok, err = refreshStore.RotateSessionRefreshTokenIdempotent(r.Context(), codeHash(req.RefreshToken), idempotencyKey, codeHash(newRefresh), codeHash(newAccess), refreshExpires, accessExpires, s.clock.Now())
+	} else {
+		sess, ok, err = s.store.RotateSessionRefreshToken(r.Context(), codeHash(req.RefreshToken), codeHash(newRefresh), codeHash(newAccess), refreshExpires, accessExpires, s.clock.Now())
+	}
 	if err != nil {
 		slog.Error("session refresh failed", "error", "rotate_refresh_token_failed", "session_id", sess.ID)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		s.writeError(w, http.StatusUnauthorized, "invalid_refresh_token", "Refresh token is invalid or expired")
 		return
 	}
 	slog.Info("session refreshed", "session_id", sess.ID, "user_id", sess.UserID)
@@ -280,17 +380,27 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
+	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
+		s.writeError(w, http.StatusBadRequest, "idempotency_key_required", "Idempotency-Key is required")
+		return
+	}
 	var req LogoutRequest
 	if err := decodeJSON(r, &req); err != nil {
-		http.Error(w, "bad request", http.StatusBadRequest)
+		s.writeError(w, http.StatusBadRequest, "invalid_request", "Invalid session logout request")
 		return
 	}
 	revoked, err := s.store.RevokeSessionByRefreshTokenHash(r.Context(), codeHash(req.RefreshToken), s.clock.Now())
 	if err != nil {
 		slog.Error("session logout failed", "error", "revoke_session_failed")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		s.writeError(w, http.StatusInternalServerError, "internal_error", "Internal server error")
 		return
 	}
 	slog.Info("session logout processed", "revoked", revoked)
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func deriveSessionToken(prefix string, key []byte, material string) string {
+	mac := hmac.New(sha256.New, key)
+	_, _ = mac.Write([]byte(material))
+	return prefix + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }

@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "lint": "node ./scripts/run-if-deps.mjs tsc --noEmit",
+    "lint": "node ./scripts/run-if-deps.mjs tsc --noEmit && node ./scripts/check-contract-paths.mjs",
     "build": "node ./scripts/run-if-deps.mjs vite build",
     "test": "node ./scripts/run-if-deps.mjs vitest"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "vite": "8.1.4",
     "typescript": "latest",
     "vitest": "latest",
     "react": "latest",

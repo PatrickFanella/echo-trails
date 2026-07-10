@@ -1,0 +1,123 @@
+name: EchoTrails
+options:
+  bundleIdPrefix: tv.subcult
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "26.0"
+configs:
+  Debug: debug
+  FieldTest: release
+  Release: release
+packages:
+  EchoTrailsShell:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+  configs:
+    Debug:
+      ECHOTRAILS_API_BASE_URL: http://127.0.0.1:8080
+      ECHOTRAILS_APS_ENVIRONMENT: development
+      ECHOTRAILS_ASSOCIATED_DOMAIN: local.invalid
+      ECHOTRAILS_PUSH_ENABLED: YES
+      ECHOTRAILS_APPLE_SIGN_IN_ENABLED: YES
+    FieldTest:
+      ECHOTRAILS_API_BASE_URL: https://api.echotrails.subcult.tv
+      ECHOTRAILS_PUSH_ENABLED: NO
+      ECHOTRAILS_APPLE_SIGN_IN_ENABLED: NO
+    Release:
+      ECHOTRAILS_API_BASE_URL: ""
+      ECHOTRAILS_APS_ENVIRONMENT: production
+      ECHOTRAILS_ASSOCIATED_DOMAIN: ""
+      ECHOTRAILS_PUSH_ENABLED: YES
+      ECHOTRAILS_APPLE_SIGN_IN_ENABLED: YES
+targets:
+  EchoTrails:
+    type: application
+    platform: iOS
+    sources:
+      - path: App
+    dependencies:
+      - package: EchoTrailsShell
+        product: EchoTrailsShell
+    preBuildScripts:
+      - name: Validate Release Configuration
+        basedOnDependencyAnalysis: false
+        script: |
+          if [ "$CONFIGURATION" = "Release" ]; then
+            case "$ECHOTRAILS_API_BASE_URL" in
+              https://*.example|https://*.example/*|"") echo "error: Set ECHOTRAILS_API_BASE_URL to the deployed HTTPS API origin." >&2; exit 1 ;;
+              https://*) ;;
+              *) echo "error: ECHOTRAILS_API_BASE_URL must use HTTPS for Release." >&2; exit 1 ;;
+            esac
+            case "$ECHOTRAILS_ASSOCIATED_DOMAIN" in
+              *.example|"") echo "error: Set ECHOTRAILS_ASSOCIATED_DOMAIN to the deployed universal-link host." >&2; exit 1 ;;
+            esac
+          fi
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: EchoTrails
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        NSLocationWhenInUseUsageDescription: EchoTrails uses your location only to prove you are at the public Place where you create an Echo.
+        NSCameraUsageDescription: Capture photos and short videos for an Echo.
+        NSMicrophoneUsageDescription: Record a short audio or video Echo.
+        NSPhotoLibraryUsageDescription: Choose photos or a short video for an Echo.
+        UIBackgroundModes: [fetch, processing, remote-notification]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        BGTaskSchedulerPermittedIdentifiers: [tv.subcult.echotrails.outbox]
+        ECHOTRAILS_API_BASE_URL: $(ECHOTRAILS_API_BASE_URL)
+        ECHOTRAILS_PUSH_ENABLED: $(ECHOTRAILS_PUSH_ENABLED)
+        ECHOTRAILS_APPLE_SIGN_IN_ENABLED: $(ECHOTRAILS_APPLE_SIGN_IN_ENABLED)
+    settings:
+      configs:
+        Debug:
+          CODE_SIGN_ENTITLEMENTS: App/EchoTrails.entitlements
+        FieldTest:
+          PRODUCT_BUNDLE_IDENTIFIER: tv.subcult.EchoTrails.fieldtest
+          CODE_SIGN_ENTITLEMENTS: ""
+        Release:
+          CODE_SIGN_ENTITLEMENTS: App/EchoTrails.entitlements
+  EchoTrailsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: EchoTrails
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+  EchoTrailsUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: AppUITests
+    dependencies:
+      - target: EchoTrails
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: EchoTrails
+schemes:
+  EchoTrails:
+    build:
+      targets:
+        EchoTrails: all
+        EchoTrailsTests: [test]
+    test:
+      config: Debug
+      targets:
+        - EchoTrailsTests
+        - EchoTrailsUITests
+    run:
+      config: FieldTest
+    archive:
+      config: Release

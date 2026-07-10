@@ -86,6 +86,37 @@ func TestProcessorPersistsResultAndClearsMetadata(t *testing.T) {
 	}
 }
 
+type failingPipeline struct{ err error }
+
+func (p failingPipeline) Process(context.Context, Asset) (Result, error) { return Result{}, p.err }
+
+type failureRecordingCatalog struct {
+	*MemoryCatalog
+	assetID string
+	failure error
+}
+
+func (c *failureRecordingCatalog) SaveProcessingFailure(_ context.Context, assetID string, err error) error {
+	c.assetID, c.failure = assetID, err
+	return nil
+}
+
+func TestProcessorPersistsPrivateReviewHoldOnPipelineFailure(t *testing.T) {
+	failure := errors.New("malware scanner unavailable")
+	catalog := &failureRecordingCatalog{MemoryCatalog: NewMemoryCatalog([]Asset{{ID: "asset-image", MediaType: "image", ContentType: "image/jpeg", ObjectKey: "media/original/asset-image/original.jpg", Status: AssetStatusUploaded}})}
+	_, err := (Processor{Catalog: catalog, Pipeline: failingPipeline{err: failure}}).ProcessAsset(context.Background(), "asset-image")
+	if !errors.Is(err, failure) || catalog.assetID != "asset-image" || !errors.Is(catalog.failure, failure) {
+		t.Fatalf("failure hold not persisted: err=%v asset=%q saved=%v", err, catalog.assetID, catalog.failure)
+	}
+}
+
+func TestBuildResultAllowsFailClosedRetry(t *testing.T) {
+	_, err := BuildResult(Asset{ID: "asset-image", MediaType: "image", ContentType: "image/jpeg", ObjectKey: "media/original/asset-image/original.jpg", Status: AssetStatusPendingReview})
+	if err != nil {
+		t.Fatalf("pending-review retry rejected: %v", err)
+	}
+}
+
 func TestJobHandlerProcessesMediaJobs(t *testing.T) {
 	catalog := NewMemoryCatalog([]Asset{{ID: "asset-image", MediaType: "image", ContentType: "image/jpeg", ObjectKey: "media/original/asset-image/original.jpg", Status: AssetStatusUploaded}})
 	handler := JobHandler{Processor: Processor{Catalog: catalog}}

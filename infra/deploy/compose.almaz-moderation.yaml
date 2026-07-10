@@ -1,0 +1,25 @@
+name: echotrails-moderation
+
+services:
+  moderation:
+    build: {context: ../../services/moderation}
+    restart: unless-stopped
+    env_file:
+      - path: .env.moderation
+        required: false
+    environment:
+      ECHOTRAILS_S3_ENDPOINT: http://10.0.0.56:19000
+      ECHOTRAILS_MODEL_DEVICE: cuda
+      HF_HOME: /models
+      TMPDIR: /processing
+    gpus: all
+    ports: ["10.0.0.200:18081:8081"]
+    volumes:
+      - /mnt/impuls/echotrails/model-cache:/models
+      - /mnt/impuls/echotrails/tmp:/processing
+    healthcheck:
+      test: [CMD, python3, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/ready', timeout=20)"]
+      interval: 30s
+      timeout: 25s
+      retries: 5
+      start_period: 10m

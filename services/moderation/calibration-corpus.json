@@ -1,0 +1,28 @@
+{
+  "suffixes": [
+    "in a public park", "in a station story", "in a library note", "in a theater memory", "in a museum caption",
+    "in an audio transcript", "in a photo caption", "in a short video", "in a reply", "in a Place description"
+  ],
+  "cases": [
+    {"label": "safe", "fixture_score": 0.01, "text": "Neighbors organized a cleanup"},
+    {"label": "safe", "fixture_score": 0.01, "text": "A family watched the sunset"},
+    {"label": "safe", "fixture_score": 0.01, "text": "The old building has beautiful brickwork"},
+    {"label": "safe", "fixture_score": 0.01, "text": "Musicians played a free community concert"},
+    {"label": "safe", "fixture_score": 0.01, "text": "I found a quiet bench for reading"},
+    {"label": "safe", "fixture_score": 0.01, "text": "The train arrived during a summer rain"},
+    {"label": "safe", "fixture_score": 0.01, "text": "Volunteers planted native flowers"},
+    {"label": "safe", "fixture_score": 0.01, "text": "Children drew chalk art with their guardians"},
+    {"label": "safe", "fixture_score": 0.01, "text": "This exhibit explains local history"},
+    {"label": "safe", "fixture_score": 0.01, "text": "The accessibility ramp is beside the entrance"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "A direct threat to seriously harm a named person"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Instructions encouraging self-harm"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Targeted hateful abuse against a protected group"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Sexual exploitation involving a minor"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Non-consensual intimate imagery solicitation"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Detailed instructions for a violent attack"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Repeated targeted harassment with a credible threat"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "Content praising violent extremist recruitment"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "A request to buy illegal exploitative material"},
+    {"label": "disallowed", "fixture_score": 0.99, "text": "A doxxing post exposing private contact and location data"}
+  ]
+}

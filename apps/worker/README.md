@@ -2,7 +2,8 @@
 
 Background worker service for asynchronous EchoTrails jobs.
 
-Planned responsibilities include media processing, notifications, moderation queue work, analytics rollups, and other Redis-backed jobs described in `docs/technical-plan.md`.
+The worker executes media processing, moderation/transcription, immutable Reply
+snapshots, ranking/Place alerts, APNs delivery, and privacy export/deletion jobs.
 
 Commands:
 
@@ -11,7 +12,7 @@ go test ./...
 go run ./cmd/worker
 ```
 
-Current skeleton job types:
+Job types include:
 
 - `process_media`
 - `generate_transcript`
@@ -24,27 +25,40 @@ The worker queue framework currently provides:
 - retry backoff and dead-letter state
 - explicit Redis connection configuration validation
 
-The executable still uses the deterministic in-memory queue. Real Redis stream
-reservation is later work.
+The executable requires Redis Streams and Postgres by default. It creates a
+consumer group, reclaims stale reservations, promotes exponentially delayed
+retries, deduplicates completed work, and moves exhausted jobs to a dead-letter
+stream. The executable has no in-memory startup mode; unit tests instantiate
+test queues directly.
 
-Current media processing skeleton provides deterministic interfaces and tests
-for:
+The production media pipeline provides:
 
 - metadata-safe processing results
-- image thumbnails/previews
-- audio waveforms
-- video thumbnail/preview/waveform plans
+- private S3 original reads, byte-count/signature checks, and SHA-256 recording
+- mandatory ClamAV scanning before processing
+- EXIF/GPS/metadata stripping and image thumbnails/previews
+- normalized AAC audio plus JSON waveforms
+- normalized 1080p H.264/AAC MP4, thumbnail, and waveform derivatives
 - uploaded/processing → pending-review status transition
 - best-effort audio/video transcript records
 - conservative local moderation review records
 
-Transcription currently uses an injectable `Transcriber` interface and deterministic
-fixture transcriber. Image assets are skipped; transcriber failures are stored as
-failed transcript records instead of crashing the worker.
+Production transcription uses the private moderation service's `faster-whisper`
+adapter. Image assets are skipped; no-speech media completes with an accessible
+fallback transcript, while service/processing failures remain private and move
+the Echo to `pending_review` for fail-closed recovery.
 
-Moderation currently uses an injectable `SafetyScanner` interface and deterministic
-fixture scanner. Only explicit low risk is approved; unknown/medium/offline cases
-go to review, and high risk is rejected.
+Production moderation uses authenticated ShieldGemma, ShieldGemma 2, and
+OpenNSFW2 adapters on the separate private model host. Only explicit low risk is
+approved; unknown/medium/offline cases go to review, and high risk is rejected.
 
-It does not run FFmpeg, ImageMagick, Whisper, real ML moderation, or real
-object-storage reads yet. Those integrations remain later isolated adapters.
+The Postgres catalog is authoritative for asset, derivative, transcript, and
+moderation status. Production startup requires object storage, FFmpeg,
+ImageMagick, ClamAV, and the authenticated private model-service configuration;
+fixture adapters exist only in test code and the disposable integration stack.
+
+Privacy jobs build sectioned exports without coordinates, credentials, raw push
+tokens, or scanner evidence. Export objects expire after seven days. Account
+deletion removes owned originals/derivatives, privacy exports, and affected
+Reply quote snapshots before clearing object pointers and de-identifying the
+authoritative rows.

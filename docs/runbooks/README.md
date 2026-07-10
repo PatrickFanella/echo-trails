@@ -10,6 +10,12 @@ Current workflows:
 - Use `docs/runbooks/database-migrations.md` for Postgres/PostGIS migration apply, test, and rollback guidance.
 - Use `docs/runbooks/deployment.md` for staging/prod-beta deployment and rollback templates.
 - Use `docs/runbooks/backups.md` for backup policy and restore drill templates.
+- Use `docs/runbooks/service-outage-drills.md` for executable moderation-host
+  outage and APNs sandbox/production mock drills.
+- Use `docs/runbooks/downers-grove-place-catalog.md` for the reviewed public
+  demo catalog, OSM import procedure, boundary policy, and privacy constraints.
+- Use `docs/runbooks/field-demo.md` for the split NUC/Almaz deployment, field
+  install, verification gates, and rollback.
 - Use `docs/runbooks/monitoring.md` for signal and alert templates.
 - Use `.gitea/ISSUE_TEMPLATE/open-pilot-task.yaml` for agent-ready work.
 - Keep generated iOS prototype code reference-only unless an issue explicitly scopes changes there.

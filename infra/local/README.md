@@ -27,4 +27,8 @@ Useful local connection values:
 
 Optional port overrides are supported with `ECHOTRAILS_LOCAL_POSTGRES_PORT`, `ECHOTRAILS_LOCAL_REDIS_PORT`, `ECHOTRAILS_LOCAL_S3_PORT`, and `ECHOTRAILS_LOCAL_S3_CONSOLE_PORT`.
 
+The GPU-backed model service is intentionally opt-in because its model downloads
+and runtime are large. Start it on a CUDA/NVIDIA host with
+`docker compose -f infra/local/compose.yaml --profile moderation up -d moderation`.
+
 `make verify` validates the compose file with Docker Compose when it is installed. On Linux runners without Docker, it runs the repository's lightweight static compose check instead so verification remains host-friendly.

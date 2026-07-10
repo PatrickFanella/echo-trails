@@ -1,0 +1,14 @@
+# Cloudflare terminates public TLS before forwarding to Almaz Caddy. These
+# origins are reachable only through the existing tunnel/edge network.
+http://api.echotrails.subcult.tv {
+	reverse_proxy 10.0.0.56:18080
+}
+
+http://app.echotrails.subcult.tv {
+	reverse_proxy 10.0.0.56:18083
+}
+
+http://admin.echotrails.subcult.tv {
+	import authelia
+	reverse_proxy 10.0.0.56:18082
+}

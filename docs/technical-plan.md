@@ -2,9 +2,18 @@
 
 ## Architecture summary
 
-EchoTrails will be rebuilt as a monorepo with a clean iOS app, custom Go REST API, Postgres/PostGIS data store, Redis-backed jobs, S3-compatible object storage/CDN, separate React/Vite admin app, and minimal public preview web app.
+EchoTrails is implemented as a monorepo with a clean iOS app, custom Go REST API, Postgres/PostGIS data store, Redis-backed jobs, S3-compatible object storage, separate React/Vite admin app, and minimal public preview web app.
 
-The existing generated iOS app is reference-only. Do not preserve its Xcode project, file structure, or simulated implementations.
+The existing top-level generated iOS app is reference-only and non-authoritative. Release implementation lives under `apps/ios`; do not add release behavior to the legacy prototype.
+
+## Current release implementation status
+
+The API, worker, migrations, moderation service, admin/public web applications,
+and SwiftUI iOS runtime now exist in their target directories. Historical phase
+notes later in this document describe the incremental state when those slices
+landed; they are not current claims that the applications remain placeholders
+or contract-only. `docs/runbooks/testflight-beta.md` is the authoritative list
+of remaining release validation and external TestFlight operations.
 
 ## Repository layout
 
@@ -31,7 +40,7 @@ Target layout:
     └── deploy/
 ```
 
-Each target app, package, and infra directory has a placeholder README so follow-up issues can add implementation in focused PRs. The repository-level generated `ios/` prototype remains reference-only; new iOS work targets `apps/ios/` unless an issue explicitly says otherwise.
+The repository-level generated `ios/` prototype remains reference-only; all release iOS work targets `apps/ios/`.
 
 ## Core stack decisions
 
@@ -96,7 +105,7 @@ Primary tables/entities:
 - `caption_text` for media modes
 - `status`: draft/uploading/processing/pending_review/published/limited/removed/deleted/failed
 - `public_location geography(Point)` or geometry point for jittered public map display
-- `private_creation_location geography(Point)` encrypted or tightly access-controlled
+- exact creation coordinates stored only as application-encrypted ciphertext in the restricted `creation_authorizations` table
 - `location_proof_captured_at`
 - `location_accuracy_meters`
 - `creation_token_id`
@@ -140,7 +149,7 @@ Shared API primitives live under `apps/api/internal/primitives` and establish th
 - Idempotency key replay semantics with request fingerprint protection.
 - Structured JSON error envelopes shaped as `{ "error": { "code", "title", "detail", "meta" } }`.
 
-The baseline machine-readable contract lives in `packages/openapi/openapi.yaml`. It starts with health, auth, place, and Echo paths and is validated by `packages/openapi/scripts/lint-openapi.py`. `npm run check` also regenerates TypeScript and Swift path constants and fails on drift as part of `make verify`.
+The baseline machine-readable contract lives in `packages/openapi/openapi.yaml`. It starts with health, auth, place, and Echo paths and is validated by `packages/openapi/scripts/lint-openapi.py`. `npm run check` also regenerates TypeScript and Swift operation path builders and fails on drift as part of `make verify`; iOS and admin runtime-source checks reject handwritten API routes.
 
 Initial resource groups:
 
@@ -148,6 +157,7 @@ Initial resource groups:
 - `/auth/email/start`
 - `/auth/email/verify`
 - `/sessions`
+- `/account/bootstrap`
 - `/me`
 - `/users/{handle}`
 - `/places/search`
@@ -167,21 +177,33 @@ Initial resource groups:
 - `/blocks`
 - `/bookmarks`
 - `/notifications`
+- `/notification-preferences`
+- `/analytics/opt-out`
 - `/exports`
 - `/account/delete`
 - `/admin/*`
 
 Every mutating mobile request should support idempotency keys.
 
-Current scoped profile implementation target: `apps/api` provides standard-library Go handlers for `GET /me`, `PATCH /me`, and `GET /users/{handle}` backed by an in-memory profile store boundary. Handles are normalized, validated, unique, and include handle-change cooldown scaffolding. Public handle responses are pseudonymous and must not expose private account fields such as email, internal user IDs, session data, or handle-change state.
+Profiles, handle cooldowns, and moderated avatars are backed by Postgres in the
+production binary. Public handle responses remain pseudonymous and omit email,
+internal user IDs, session data, and handle-change state.
 
 Current scoped location proof implementation target: `apps/api/internal/locationproof` contains pure Go validation for Echo creation-token preflight. It validates proof freshness, GPS accuracy, selected Place radius/boundary, restricted Place status, ambiguous eligible Places, and trust/rate gate decisions before issuing an opaque signed creation token. The token is bound to user, Place, proof time, issue time, and expiry, and must not expose exact private coordinates.
 
-The scoped Sign in with Apple server boundary lives under `apps/api/internal/auth/apple`. It defines the Apple identity verifier interface, a deterministic test verifier, identity-linking service semantics, and production config placeholders. Production Apple verification must read only the secret names `ECHOTRAILS_APPLE_TEAM_ID`, `ECHOTRAILS_APPLE_CLIENT_ID`, `ECHOTRAILS_APPLE_KEY_ID`, and `ECHOTRAILS_APPLE_PRIVATE_KEY`; no secret values or signing material belong in git.
+The Sign in with Apple boundary under `apps/api/internal/auth/apple` verifies
+issuer, audience, signature, expiry, and nonce-compatible identity linkage using
+Apple's JWKS. Production requires `ECHOTRAILS_APPLE_CLIENT_ID`; APNs signing
+credentials remain a separate worker concern and never belong in git.
 
-Current scoped implementation target: `apps/api` provides standard-library Go handlers for passwordless email auth and session refresh/logout; it is intentionally storage/provider-agnostic for later persistence swaps. The local dev email adapter is explicit opt-in only and production must configure a real provider before beta.
+Passwordless email requests, rotating refresh sessions, replay-safe refresh,
+revocation, and identity links are persisted in Postgres. Production startup
+requires SMTP; the development email adapter is available only with the explicit
+memory-store switch.
 
-Current scoped web implementation target: `apps/admin-web` and `apps/public-web` provide minimal React/Vite placeholders. Each app documents npm and pnpm install paths, and its TypeScript lint/build/test scripts skip with an explicit message until dependencies are installed in that app directory.
+`apps/admin-web` provides the authenticated moderation/operations console;
+`apps/public-web` provides the intentionally narrow TestFlight/disclosure site.
+Both use locked dependencies and are built/tested by `make verify`.
 
 ## Upload and publish flow
 
@@ -325,72 +347,19 @@ for upload lifecycle, transcripts, and moderation reviews, plus a deterministic
 worker job skeleton under `apps/worker` for `process_media`,
 `generate_transcript`, and `scan_media_safety`.
 
-Current scoped implementation target for #28/#29 adds API-only direct upload
-handlers for `POST /media/uploads`, `GET /media/uploads/{uploadId}`, and
-`POST /media/uploads/{uploadId}/complete`. The handlers validate media type,
-content type, size, idempotency key replay, opaque object keys, and hide upload
-URLs after completion/expiry. Returned upload URLs are local-dev placeholders
-for MinIO, not production presigned URLs. The worker queue now has explicit enqueue,
-reserve, retry/backoff, dead-letter, and Redis connection configuration
-contracts.
+The production path uses private presigned uploads, Postgres-authoritative media
+records, Redis Streams reservation/retry/dead-letter handling, object verification,
+ClamAV, FFmpeg/ImageMagick normalization, metadata stripping, derivatives,
+faster-whisper transcripts, and conservative revision-pinned ShieldGemma/
+ShieldGemma 2/OpenNSFW2 moderation. Unknown or failed scans remain private.
 
-Current scoped implementation target for #30 adds deterministic media processing
-interfaces under `apps/worker/internal/media`. It models metadata-stripping
-results, derivative plans for image thumbnails/previews, audio waveforms, and
-video thumbnail/preview/waveform outputs, and uploaded/processing →
-pending-review state transitions. The worker job processor can call this handler
-for `process_media` jobs. Real Redis reservation, presigned-object verification,
-FFmpeg/ImageMagick execution, transcription engines, and moderation scanners
-remain later isolated adapters.
-
-Current scoped implementation target for #31/#32 adds deterministic worker
-contracts for `generate_transcript` and `scan_media_safety`. Transcription writes
-best-effort transcript records for audio/video, skips images, and stores failures
-without panicking jobs. Moderation is conservative: only explicit low-risk scanner
-results are approved; unknown, medium, or scanner-offline states require review,
-and high-risk results are rejected. Real Whisper/audio extraction, ML moderation,
-and separate moderation hosts remain deferred adapters.
-
-Current scoped implementation target for #33 extends media upload status with an
-activity-safe lifecycle: `created`, `uploaded`, `processing`, `pending_review`,
-`failed`, and `expired`, plus optional transcript/moderation status summaries.
-Private upload URLs remain hidden after completion or expiry; no auth ownership,
-notifications, or iOS Activity UI are included yet.
-
-Current scoped iOS implementation target for #13 is a Swift Package shell under
-`apps/ios` with stable app identity constants, generated OpenAPI path constants,
-and Phase 3 tab names only. No auth, SwiftData, networking, map UI, or media UI
-is included in the shell.
-
-Current scoped implementation target for #34 keeps Phase 3 Linux-verifiable by
-hardening the Swift Package baseline rather than requiring an Xcode project. It
-adds pure Swift app bootstrap, local/staging/production environment selection,
-API client configuration seams, and navigation descriptors. Runtime auth,
-Keychain, SwiftData, networking, MapKit, media composer UI, and Xcode-only smoke
-tests start in later Phase 3 issues.
-
-Current scoped implementation target for #36 keeps navigation Linux-verifiable as
-pure Swift data: route parsing, default selected tab, preferred tab metadata,
-screen descriptors, accessibility label seeds, and auth-required route metadata.
-The `ios-boundary-check` target verifies tab order, route contracts, and absence
-of SwiftUI, MapKit, SwiftData, AuthenticationServices, and Security imports until
-machine-specific UI/auth issues can be tested with Xcode.
-
-Current scoped implementation target for #37-#43 closes Phase 3 as contract-only
-Swift Package work on Linux. It adds descriptors/tests for Map markers and Place
-detail, Explore search sections, Place-first Echo draft validation, SwiftData-ready
-cache/outbox schema descriptors, media composer limits/upload intents, Profile and
-Activity status rows, and accessibility audit surfaces. These contracts use only
-Foundation and deterministic Python boundary checks; actual SwiftUI screens,
-MapKit, SwiftData models, media pickers, runtime networking, Keychain/auth flows,
-and Xcode UI smoke tests remain deferred to a macOS-capable implementation pass.
-
-Current scoped implementation target for #35 finishes Phase 3 on Linux by adding
-pure Swift auth/session contracts only: email code request/verify descriptors,
-Apple token exchange descriptors, redacted session token descriptors, and a
-Keychain-ready storage seam. It intentionally does not import
-AuthenticationServices or Security, render login UI, persist tokens, or perform
-runtime networking until a macOS/Xcode-capable pass can verify those integrations.
+`apps/ios` is the authoritative SwiftUI/SwiftData application. It includes
+Keychain sessions, Map/Explore/Activity/Profile, Place-first GPS proof, every
+content mode, file-backed background transfers, durable pre-draft checkpoints,
+social/safety flows, subscriptions, APNs, public profiles, avatars, appeals,
+server-authoritative invite/consent/profile gating, cached offline discovery,
+an outbox/upload/processing status dashboard, and accessible media playback. The portable Swift package
+continues to provide generated contracts and deterministic Linux tests.
 
 ### Phase 3: iOS clean rebuild
 
@@ -410,27 +379,12 @@ runtime networking until a macOS/Xcode-capable pass can verify those integration
 - Notifications.
 - Admin moderation app.
 
-Current scoped implementation target for #44-#48 is a Linux-verifiable in-memory
-API contract slice. It adds reaction totals with one reaction per user per Echo,
-text-only one-level replies, stitch records linking new Echo IDs to source Echoes,
-report/moderation intake records, viewer hides/user blocks that filter visible
-replies and notification eligibility, and stored activity-safe notification
-records. This does not add DB persistence, ranking, APNs delivery, abuse scoring,
-admin adjudication, Reply screenshot rendering, or iOS social UI; those remain
-separate Phase 4/5 implementation passes.
-
-Current scoped implementation target for #49-#51 is a Linux-verifiable admin web
-fixture workflow in `apps/admin-web`. It adds deterministic role-gated shell
-navigation, moderation queue/action-intent placeholders, and Places review
-placeholders for boundary-sensitive overrides. It does not add real auth, API
-writes, DB persistence, sanctions, appeals, or production moderation decisions.
-
-Current scoped implementation target for #52 is a Linux-verifiable iOS social UI
-contract layer in `apps/ios`. It adds pure Swift descriptors for reaction bars,
-reply composers/threads, stitch source cards, report flows, hide/block actions,
-and authenticated action metadata. It does not add SwiftUI/UIKit views, runtime
-networking, SwiftData persistence, screenshot rendering, APNs, or production
-moderation decisions.
+Social and safety state is transactional in Postgres: replaceable reactions,
+one-level editable Reply threads and revisions, full-content Stitches, immutable
+worker-rendered Reply snapshots, visibility controls, sanctions, appeals,
+notifications, and snapshot suppression for privacy or moderator safety removal.
+The admin web uses role-checked HTTP-only sessions, CSRF, signed private previews,
+audited confirmations/reasons, Place merge/boundary tools, invites, and job queues.
 
 ### Phase 5: Beta readiness
 

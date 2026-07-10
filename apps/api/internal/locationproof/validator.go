@@ -28,6 +28,7 @@ var (
 	ErrRateLimited            = errors.New("rate gate rejected creation token")
 	ErrInvalidRequest         = errors.New("invalid location proof request")
 	ErrMissingSigningKey      = errors.New("missing creation token signing key")
+	ErrInvalidToken           = errors.New("invalid creation token")
 )
 
 type PlaceStatus string
@@ -128,10 +129,6 @@ func ValidateCreationTokenRequest(req Request, cfg Config) (CreationToken, error
 	if !containsProof(selected, req.Proof.Coordinate) {
 		return CreationToken{}, ErrOutsideBoundary
 	}
-	if eligibleMatches(req.Places, req.Proof.Coordinate) > 1 {
-		return CreationToken{}, ErrAmbiguousEligiblePlace
-	}
-
 	issuedAt := cfg.Now.UTC().Round(0)
 	expiresAt := issuedAt.Add(cfg.TokenTTL)
 	token, err := signToken(tokenClaims{
@@ -142,6 +139,45 @@ func ValidateCreationTokenRequest(req Request, cfg Config) (CreationToken, error
 		return CreationToken{}, err
 	}
 	return CreationToken{Token: token, PlaceID: selected.ID, UserID: strings.TrimSpace(req.UserID), IssuedAt: issuedAt, ExpiresAt: expiresAt}, nil
+}
+
+// VerifyCreationToken validates the signature, binding, and lifetime of a
+// previously issued creation token. Exact coordinates are deliberately absent
+// from the signed claims and must be resolved through the private proof store.
+func VerifyCreationToken(token, userID, placeID string, now time.Time, signingKey []byte) (CreationToken, error) {
+	if len(signingKey) == 0 {
+		return CreationToken{}, ErrMissingSigningKey
+	}
+	if !strings.HasPrefix(token, "crt_") {
+		return CreationToken{}, ErrInvalidToken
+	}
+	parts := strings.Split(strings.TrimPrefix(token, "crt_"), ".")
+	if len(parts) != 2 {
+		return CreationToken{}, ErrInvalidToken
+	}
+	mac := hmac.New(sha256.New, signingKey)
+	_, _ = mac.Write([]byte(parts[0]))
+	wantSignature := mac.Sum(nil)
+	gotSignature, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil || !hmac.Equal(gotSignature, wantSignature) {
+		return CreationToken{}, ErrInvalidToken
+	}
+	body, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return CreationToken{}, ErrInvalidToken
+	}
+	var claims tokenClaims
+	if err := json.Unmarshal(body, &claims); err != nil {
+		return CreationToken{}, ErrInvalidToken
+	}
+	issuedAt := time.UnixMilli(claims.IssuedAt).UTC()
+	expiresAt := time.UnixMilli(claims.ExpiresAt).UTC()
+	now = now.UTC()
+	if claims.Version != 1 || claims.UserID != strings.TrimSpace(userID) || claims.PlaceID != strings.TrimSpace(placeID) ||
+		!expiresAt.After(now) || expiresAt.Before(issuedAt) || issuedAt.After(now.Add(time.Second)) {
+		return CreationToken{}, ErrInvalidToken
+	}
+	return CreationToken{Token: token, UserID: claims.UserID, PlaceID: claims.PlaceID, IssuedAt: issuedAt, ExpiresAt: expiresAt}, nil
 }
 
 func normalizeConfig(cfg Config) Config {
@@ -186,16 +222,6 @@ func findPlace(places []Place, id string) (Place, bool) {
 		}
 	}
 	return Place{}, false
-}
-
-func eligibleMatches(places []Place, point Coordinate) int {
-	matches := 0
-	for _, place := range places {
-		if place.Status == PlaceActive && containsProof(place, point) {
-			matches++
-		}
-	}
-	return matches
 }
 
 func containsProof(place Place, point Coordinate) bool {

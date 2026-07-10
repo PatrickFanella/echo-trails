@@ -42,13 +42,13 @@ public extension ScreenDescriptor {
         case .tab(let tab):
             return ScreenDescriptor(route: route, title: tab.title, accessibilityLabel: "\(tab.title) tab")
         case .placeDetail(let id):
-            return ScreenDescriptor(route: route, title: "Place", accessibilityLabel: "Place detail", requiredAPIPath: "/places/\(id)")
+            return ScreenDescriptor(route: route, title: "Place", accessibilityLabel: "Place detail", requiredAPIPath: OpenAPIPaths.getPlace(placeId: id))
         case .echoDetail(let id):
-            return ScreenDescriptor(route: route, title: "Echo", accessibilityLabel: "Echo detail", requiredAPIPath: "/echoes/\(id)")
+            return ScreenDescriptor(route: route, title: "Echo", accessibilityLabel: "Echo detail", requiredAPIPath: OpenAPIPaths.getEcho(echoId: id))
         case .userProfile(let handle):
-            return ScreenDescriptor(route: route, title: "Profile", accessibilityLabel: "Profile for \(handle)", requiredAPIPath: "/users/\(handle)")
+            return ScreenDescriptor(route: route, title: "Profile", accessibilityLabel: "Profile for \(handle)", requiredAPIPath: OpenAPIPaths.getPublicProfile(handle: handle))
         case .mediaUploadStatus(let uploadID):
-            return ScreenDescriptor(route: route, title: "Upload Status", accessibilityLabel: "Upload status", requiredAPIPath: "/media/uploads/\(uploadID)")
+            return ScreenDescriptor(route: route, title: "Upload Status", accessibilityLabel: "Upload status", requiredAPIPath: OpenAPIPaths.getMediaUpload(uploadId: uploadID))
         }
     }
 }

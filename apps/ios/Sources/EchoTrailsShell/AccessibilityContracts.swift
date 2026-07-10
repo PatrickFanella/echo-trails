@@ -8,6 +8,9 @@ public enum AccessibilitySurface: String, CaseIterable, Sendable {
     case mediaAttachment
     case profileRow
     case activityRow
+    case moderationStatus
+    case appealRow
+    case transcript
 }
 
 public struct AccessibilityDescriptor: Equatable, Sendable {
@@ -55,6 +58,9 @@ public enum PhaseThreeAccessibilityCatalog {
         AccessibilityDescriptor(surface: .createStep, label: "Create Echo step"),
         AccessibilityDescriptor(surface: .mediaAttachment, label: "Media attachment"),
         AccessibilityDescriptor(surface: .profileRow, label: "Profile row"),
-        AccessibilityDescriptor(surface: .activityRow, label: "Activity row")
+        AccessibilityDescriptor(surface: .activityRow, label: "Activity row"),
+        AccessibilityDescriptor(surface: .moderationStatus, label: "Moderation status"),
+        AccessibilityDescriptor(surface: .appealRow, label: "Appeal status"),
+        AccessibilityDescriptor(surface: .transcript, label: "Media transcript")
     ]
 }

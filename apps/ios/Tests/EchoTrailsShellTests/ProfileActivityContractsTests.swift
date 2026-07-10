@@ -30,4 +30,23 @@ final class ProfileActivityContractsTests: XCTestCase {
 
         XCTAssertEqual(item.preview, "Open EchoTrails to view this update.")
     }
+
+    func testActivityPaginationEscapesOpaqueCursor() throws {
+        let first = try XCTUnwrap(ActivityPageRequest(limit: 50).apiPath)
+        XCTAssertEqual(first, "/notifications?limit=50")
+        let next = try XCTUnwrap(ActivityPageRequest(cursor: "opaque+/= cursor", limit: 25).apiPath)
+        XCTAssertTrue(next.contains("cursor=opaque%2B%2F%3D%20cursor"))
+        XCTAssertNil(ActivityPageRequest(limit: 101).apiPath)
+    }
+
+    func testActivityTargetsUseSafeProductRoutes() {
+        XCTAssertEqual(ActivityTargetKind.resolve(notificationKind: "reply"), .echo)
+        XCTAssertEqual(ActivityTargetKind.resolve(notificationKind: "upload_status"), .echo)
+        XCTAssertEqual(ActivityTargetKind.resolve(notificationKind: "place_alert"), .place)
+        XCTAssertEqual(ActivityTargetKind.resolve(notificationKind: "moderation"), .moderationAction)
+        XCTAssertEqual(NotificationMuteDescriptor(target: .echo, targetID: "echo-1").apiPath, "/mutes/echoes/echo-1")
+        XCTAssertNil(NotificationMuteDescriptor(target: .place, targetID: "bad/id").apiPath)
+        XCTAssertEqual(PlaceSubscriptionDescriptor(placeID: "place-1").resourceAPIPath, "/places/place-1/subscription")
+        XCTAssertEqual(PlaceSubscriptionDescriptor.listAPIPath, "/subscriptions")
+    }
 }

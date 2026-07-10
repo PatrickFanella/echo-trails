@@ -23,6 +23,7 @@ type PrivacyJobStatus struct {
 	Status      string    `json:"status"`
 	RequestedAt time.Time `json:"requested_at"`
 	DownloadURL string    `json:"download_url,omitempty"`
+	ObjectKey   string    `json:"-"`
 }
 
 type AccountDeletionRequest struct {

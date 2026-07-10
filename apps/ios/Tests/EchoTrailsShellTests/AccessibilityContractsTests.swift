@@ -3,7 +3,7 @@ import XCTest
 
 final class AccessibilityContractsTests: XCTestCase {
     func testPhaseThreeCatalogCoversRequiredSurfaces() {
-        XCTAssertEqual(PhaseThreeAccessibilityCatalog.requiredDescriptors.map(\.surface), [.tab, .mapMarker, .exploreRow, .createStep, .mediaAttachment, .profileRow, .activityRow])
+        XCTAssertEqual(PhaseThreeAccessibilityCatalog.requiredDescriptors.map(\.surface), [.tab, .mapMarker, .exploreRow, .createStep, .mediaAttachment, .profileRow, .activityRow, .moderationStatus, .appealRow, .transcript])
     }
 
     func testAccessibilityAuditRequiresLabelsAndDynamicType() {

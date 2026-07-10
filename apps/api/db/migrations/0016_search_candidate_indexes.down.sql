@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS echo_rank_snapshots_search_candidates_idx;
+DROP INDEX IF EXISTS echoes_published_search_candidates_idx;

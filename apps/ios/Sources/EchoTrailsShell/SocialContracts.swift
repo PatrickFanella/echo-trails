@@ -21,7 +21,7 @@ public struct ReactionBarDescriptor: Equatable, Sendable {
     }
 
     public var apiPath: String? {
-        ContractPath.safeSegment(echoID).map { "/echoes/\($0)/reactions" }
+        ContractPath.safeSegment(echoID).map { OpenAPIPaths.putEchoReaction(echoId: $0) }
     }
 
     public var isActionable: Bool {
@@ -43,7 +43,7 @@ public struct ReplyComposerDescriptor: Equatable, Sendable {
     }
 
     public var apiPath: String? {
-        ContractPath.safeSegment(echoID).map { "/echoes/\($0)/replies" }
+        ContractPath.safeSegment(echoID).map { OpenAPIPaths.createEchoReply(echoId: $0) }
     }
 
     public var isValid: Bool {
@@ -65,7 +65,47 @@ public struct ReplyThreadDescriptor: Equatable, Sendable {
     }
 
     public var apiPath: String? {
-        ContractPath.safeSegment(echoID).map { "/echoes/\($0)/replies" }
+        ContractPath.safeSegment(echoID).map { OpenAPIPaths.listEchoReplies(echoId: $0) }
+    }
+}
+
+public struct ReplyThreadNode: Equatable, Sendable {
+    public let id: String
+    public let parentID: String?
+    public let postedAt: Date
+
+    public init(id: String, parentID: String? = nil, postedAt: Date) {
+        self.id = id
+        self.parentID = parentID
+        self.postedAt = postedAt
+    }
+}
+
+/// Produces a stable, oldest-first, one-level thread without dropping an
+/// otherwise visible child when its parent is unavailable to the viewer.
+public struct ReplyThreadLayout: Equatable, Sendable {
+    public let rootIDs: [String]
+    public let childIDsByParent: [String: [String]]
+
+    public init(nodes: [ReplyThreadNode]) {
+        let safeNodes = nodes
+            .filter { ContractPath.safeSegment($0.id) != nil }
+            .sorted { lhs, rhs in
+                lhs.postedAt == rhs.postedAt ? lhs.id < rhs.id : lhs.postedAt < rhs.postedAt
+            }
+        let IDs = Set(safeNodes.map(\.id))
+        let rootSet = Set(safeNodes.filter { node in
+            guard let parentID = node.parentID else { return true }
+            return !IDs.contains(parentID)
+        }.map(\.id))
+        self.rootIDs = safeNodes.filter { rootSet.contains($0.id) }.map(\.id)
+
+        var children: [String: [String]] = [:]
+        for node in safeNodes {
+            guard let parentID = node.parentID, IDs.contains(parentID), !rootSet.contains(node.id) else { continue }
+            children[parentID, default: []].append(node.id)
+        }
+        self.childIDsByParent = children
     }
 }
 
@@ -74,21 +114,40 @@ public struct StitchComposerDescriptor: Equatable, Sendable {
     public let title: String
     public let body: String
     public let creationToken: CreationTokenDescriptor?
+    public let quotedReplyID: String?
+    public let quoteWarningAcknowledged: Bool
 
-    public init(sourceEchoID: String, title: String, body: String, creationToken: CreationTokenDescriptor? = nil) {
+    public init(sourceEchoID: String, title: String, body: String, creationToken: CreationTokenDescriptor? = nil, quotedReplyID: String? = nil, quoteWarningAcknowledged: Bool = false) {
         self.sourceEchoID = sourceEchoID
         self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         self.body = body.trimmingCharacters(in: .whitespacesAndNewlines)
         self.creationToken = creationToken
+        self.quotedReplyID = quotedReplyID
+        self.quoteWarningAcknowledged = quoteWarningAcknowledged
     }
 
     public var apiPath: String? {
-        ContractPath.safeSegment(sourceEchoID).map { "/echoes/\($0)/stitches" }
+        ContractPath.safeSegment(sourceEchoID).map { OpenAPIPaths.createEchoStitch(echoId: $0) }
     }
 
     public func isValid(at now: Date) -> Bool {
-        apiPath != nil && !title.isEmpty && title.count <= 80 && !body.isEmpty && body.count <= 2_000 && creationToken?.isValid(at: now) == true
+        apiPath != nil && !title.isEmpty && title.count <= 80 && !body.isEmpty && body.count <= 500 && creationToken?.isValid(at: now) == true && quoteIsValid
     }
+
+    private var quoteIsValid: Bool {
+        quotedReplyID == nil || (ContractPath.safeSegment(quotedReplyID ?? "") != nil && quoteWarningAcknowledged)
+    }
+}
+
+public struct ReplyRevisionDescriptor: Equatable, Sendable {
+    public let replyID: String
+
+    public init(replyID: String) { self.replyID = replyID }
+
+    public var resourceAPIPath: String? { ContractPath.safeSegment(replyID).map { OpenAPIPaths.updateReply(replyId: $0) } }
+    public var editAPIPath: String? { resourceAPIPath }
+    public var deleteAPIPath: String? { resourceAPIPath }
+    public var historyAPIPath: String? { ContractPath.safeSegment(replyID).map { OpenAPIPaths.getReplyHistory(replyId: $0) } }
 }
 
 public struct SourceCardDescriptor: Equatable, Sendable {
@@ -139,7 +198,7 @@ public struct ReportFlowDescriptor: Equatable, Sendable {
         self.anonymousToReportedUser = true
     }
 
-    public var apiPath: String { "/reports" }
+    public var apiPath: String { OpenAPIPaths.createReport }
 
     public var isValid: Bool {
         ContractPath.safeSegment(reporterUserID) != nil && ContractPath.safeSegment(targetID) != nil && !details.isEmpty && details.count <= 500
@@ -163,7 +222,7 @@ public struct SafetyActionDescriptor: Equatable, Sendable {
     }
 
     public var apiPath: String {
-        kind == .blockUser ? "/blocks" : "/hides"
+        kind == .blockUser ? OpenAPIPaths.blockUser : OpenAPIPaths.hideTarget
     }
 
     public var filtersFutureContent: Bool {

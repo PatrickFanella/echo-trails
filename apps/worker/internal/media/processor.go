@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"git.subcult.tv/subculture-collective/echo-trails/apps/worker/internal/jobs"
 )
@@ -24,12 +25,14 @@ var ErrUnsupportedMedia = errors.New("unsupported media asset")
 var ErrProcessorMisconfigured = errors.New("media processor misconfigured")
 
 type Asset struct {
-	ID          string
-	MediaType   string
-	ContentType string
-	ObjectKey   string
-	Status      string
-	Metadata    map[string]string
+	ID            string
+	StorageBucket string
+	MediaType     string
+	ContentType   string
+	ObjectKey     string
+	Status        string
+	ByteSize      int64
+	Metadata      map[string]string
 }
 
 type Derivative struct {
@@ -38,13 +41,20 @@ type Derivative struct {
 	ObjectKey      string
 	ContentType    string
 	MetadataSafe   bool
+	Data           []byte
 }
 
 type Result struct {
-	AssetID          string
-	Status           string
-	MetadataStripped bool
-	Derivatives      []Derivative
+	AssetID             string
+	Status              string
+	MetadataStripped    bool
+	Derivatives         []Derivative
+	SHA256              []byte
+	DurationMS          int
+	Width               int
+	Height              int
+	VerifiedContentType string
+	MalwareScanStatus   string
 }
 
 type Catalog interface {
@@ -52,14 +62,25 @@ type Catalog interface {
 	SaveResult(context.Context, Result) error
 }
 
+type ProcessingFailureCatalog interface {
+	SaveProcessingFailure(context.Context, string, error) error
+}
+
 type Processor struct {
-	Catalog Catalog
+	Catalog  Catalog
+	Pipeline ProcessingPipeline
+}
+
+type ProcessingPipeline interface {
+	Process(context.Context, Asset) (Result, error)
 }
 
 type JobHandler struct {
-	Processor     Processor
-	Transcription TranscriptionProcessor
-	Moderation    ModerationProcessor
+	Processor      Processor
+	Transcription  TranscriptionProcessor
+	Moderation     ModerationProcessor
+	Snapshots      QuoteSnapshotProcessor
+	TextModeration TextModerationProcessor
 }
 
 func (h JobHandler) HandleJob(ctx context.Context, job jobs.Job) error {
@@ -70,6 +91,14 @@ func (h JobHandler) HandleJob(ctx context.Context, job jobs.Job) error {
 		}
 		if job.Type == jobs.TypeScanMediaSafety {
 			_, err := h.Moderation.ProcessAsset(ctx, job.AssetID)
+			return err
+		}
+		if job.Type == jobs.TypeRenderReplySnapshot {
+			_, err := h.Snapshots.Process(ctx, job.AssetID)
+			return err
+		}
+		if job.Type == jobs.TypeScanEchoSafety {
+			_, err := h.TextModeration.ProcessEcho(ctx, job.AssetID)
 			return err
 		}
 		return nil
@@ -86,8 +115,18 @@ func (p Processor) ProcessAsset(ctx context.Context, assetID string) (Result, er
 	if err != nil {
 		return Result{}, err
 	}
-	result, err := BuildResult(asset)
+	var result Result
+	if p.Pipeline != nil {
+		result, err = p.Pipeline.Process(ctx, asset)
+	} else {
+		result, err = BuildResult(asset)
+	}
 	if err != nil {
+		if failures, ok := p.Catalog.(ProcessingFailureCatalog); ok {
+			if saveErr := failures.SaveProcessingFailure(ctx, asset.ID, err); saveErr != nil {
+				return Result{}, fmt.Errorf("process media: %v; save failure hold: %w", err, saveErr)
+			}
+		}
 		return Result{}, err
 	}
 	if err := p.Catalog.SaveResult(ctx, result); err != nil {
@@ -100,7 +139,7 @@ func BuildResult(asset Asset) (Result, error) {
 	if !safeAssetID(asset.ID) || strings.TrimSpace(asset.ObjectKey) == "" {
 		return Result{}, ErrUnsupportedMedia
 	}
-	if asset.Status != AssetStatusUploaded && asset.Status != AssetStatusProcessing {
+	if asset.Status != AssetStatusUploaded && asset.Status != AssetStatusProcessing && asset.Status != AssetStatusPendingReview {
 		return Result{}, ErrUnsupportedMedia
 	}
 	derivatives, err := derivativePlan(asset)
@@ -168,15 +207,51 @@ type MemoryCatalog struct {
 	Results           map[string]Result
 	Transcripts       map[string]Transcript
 	ModerationReviews map[string]ModerationReview
+	QuoteSnapshots    map[string]QuoteSnapshot
+	RenderedSnapshots map[string]RenderedQuoteSnapshot
+	EchoTexts         map[string]EchoText
+	EchoReviews       map[string]EchoModerationReview
 }
 
 func NewMemoryCatalog(assets []Asset) *MemoryCatalog {
-	catalog := &MemoryCatalog{Assets: map[string]Asset{}, Results: map[string]Result{}, Transcripts: map[string]Transcript{}, ModerationReviews: map[string]ModerationReview{}}
+	catalog := &MemoryCatalog{Assets: map[string]Asset{}, Results: map[string]Result{}, Transcripts: map[string]Transcript{}, ModerationReviews: map[string]ModerationReview{}, QuoteSnapshots: map[string]QuoteSnapshot{}, RenderedSnapshots: map[string]RenderedQuoteSnapshot{}, EchoTexts: map[string]EchoText{}, EchoReviews: map[string]EchoModerationReview{}}
 	for _, asset := range assets {
 		catalog.Assets[asset.ID] = asset
 	}
 	return catalog
 }
+
+func (c *MemoryCatalog) LoadEchoText(_ context.Context, echoID string) (EchoText, error) {
+	content, ok := c.EchoTexts[echoID]
+	if !ok {
+		return EchoText{}, ErrUnsupportedMedia
+	}
+	return content, nil
+}
+
+func (c *MemoryCatalog) SaveEchoModerationReview(_ context.Context, review EchoModerationReview) error {
+	c.EchoReviews[review.EchoID] = review
+	return nil
+}
+
+func (c *MemoryCatalog) CleanupExpiredOriginals(context.Context, time.Time, int) (int, error) {
+	return 0, nil
+}
+
+func (c *MemoryCatalog) LoadQuoteSnapshot(_ context.Context, linkID string) (QuoteSnapshot, error) {
+	snapshot, ok := c.QuoteSnapshots[linkID]
+	if !ok {
+		return QuoteSnapshot{}, ErrUnsupportedMedia
+	}
+	return snapshot, nil
+}
+
+func (c *MemoryCatalog) SaveQuoteSnapshot(_ context.Context, rendered RenderedQuoteSnapshot) error {
+	c.RenderedSnapshots[rendered.LinkID] = rendered
+	return nil
+}
+
+func (c *MemoryCatalog) FailQuoteSnapshot(_ context.Context, _ string, _ error) error { return nil }
 
 func (c *MemoryCatalog) SaveModerationReview(_ context.Context, review ModerationReview) error {
 	if c.ModerationReviews == nil {

@@ -13,6 +13,22 @@ from pathlib import Path
 from typing import Any
 
 
+PUBLIC_OPERATIONS = {
+    "getPublicProfile", "getHealth", "getReadiness", "getMetrics",
+    "signInWithApple", "getCurrentConsent", "startEmailAuth",
+    "verifyEmailAuth", "refreshSession", "logoutSession", "searchPlaces",
+    "searchDiscovery", "getNotableEchoes", "getPlace", "listPlaceEchoes",
+    "nearbyPlaces", "getEcho", "getEchoReactions", "listEchoReplies",
+    "getPublicMediaAsset", "listPublicProfileEchoes",
+}
+
+ADMIN_COOKIE_OPERATIONS = {
+    "deleteAdminSession", "listAdminQueue", "applyModerationAction",
+    "reviewAdminSafetyItem", "getAdminMediaPreview", "reviewAdminPlace",
+    "resolveAdminAppeal", "manageAdminJob", "createAdminInvite",
+}
+
+
 def fail(message: str) -> None:
     print(f"OpenAPI lint failed: {message}", file=sys.stderr)
     raise SystemExit(1)
@@ -70,6 +86,9 @@ def lint(path: Path) -> None:
     require_string(info.get("version"), "info.version")
 
     paths = require_mapping(root.get("paths"), "paths")
+    default_security = root.get("security")
+    if default_security != [{"bearerAuth": []}]:
+        fail("top-level security must require bearerAuth")
     if not paths:
         fail("paths must not be empty")
     for path_name, path_item in paths.items():
@@ -81,14 +100,29 @@ def lint(path: Path) -> None:
             fail(f"{path_name} must define at least one operation")
         for method, operation in operations.items():
             op = require_mapping(operation, f"paths.{path_name}.{method}")
-            require_string(op.get("operationId"), f"paths.{path_name}.{method}.operationId")
+            operation_id = require_string(op.get("operationId"), f"paths.{path_name}.{method}.operationId")
+            security = op.get("security", default_security)
+            expected_security = [{"bearerAuth": []}]
+            if operation_id in PUBLIC_OPERATIONS:
+                expected_security = []
+            elif operation_id in ADMIN_COOKIE_OPERATIONS:
+                expected_security = [{"adminCookie": []}]
+            if security != expected_security:
+                fail(f"{path_name} {method} security must be {expected_security!r}")
             responses = require_mapping(op.get("responses"), f"paths.{path_name}.{method}.responses")
             if not responses:
                 fail(f"{path_name} {method} must define responses")
             if not any(str(code)[0] in {"2", "3"} for code in responses):
                 fail(f"{path_name} {method} must define a success response")
+            if method in {"post", "put", "patch", "delete"} and not path_name.startswith("/auth/") and path_name != "/admin/session":
+                parameters = op.get("parameters", [])
+                if not any(isinstance(parameter, dict) and parameter.get("$ref") == "#/components/parameters/IdempotencyKey" for parameter in parameters):
+                    fail(f"{path_name} {method} must require Idempotency-Key")
 
     components = require_mapping(root.get("components"), "components")
+    security_schemes = require_mapping(components.get("securitySchemes"), "components.securitySchemes")
+    if "bearerAuth" not in security_schemes or "adminCookie" not in security_schemes:
+        fail("bearerAuth and adminCookie security schemes are required")
     schemas = require_mapping(components.get("schemas"), "components.schemas")
     required_schemas = {"ErrorResponse", "HealthResponse", "AuthTokenResponse", "Place", "Echo"}
     missing = sorted(required_schemas.difference(schemas))

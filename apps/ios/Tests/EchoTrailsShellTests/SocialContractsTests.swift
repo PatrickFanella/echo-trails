@@ -18,6 +18,15 @@ final class SocialContractsTests: XCTestCase {
         XCTAssertFalse(ReplyComposerDescriptor(echoID: "echo-active-1", body: String(repeating: "a", count: 501)).isValid)
         XCTAssertFalse(ReplyComposerDescriptor(echoID: "echo-active-1", body: "ok", parentReplyID: "nested/reply").isValid)
         XCTAssertEqual(ReplyThreadDescriptor(echoID: "echo-active-1", replyIDsOldestFirst: ["reply-1", "bad/id", "reply-2"]).replyIDsOldestFirst, ["reply-1", "reply-2"])
+
+        let layout = ReplyThreadLayout(nodes: [
+            ReplyThreadNode(id: "child-late", parentID: "parent", postedAt: Date(timeIntervalSince1970: 4)),
+            ReplyThreadNode(id: "parent", postedAt: Date(timeIntervalSince1970: 1)),
+            ReplyThreadNode(id: "child-early", parentID: "parent", postedAt: Date(timeIntervalSince1970: 2)),
+            ReplyThreadNode(id: "orphan", parentID: "unavailable", postedAt: Date(timeIntervalSince1970: 3)),
+        ])
+        XCTAssertEqual(layout.rootIDs, ["parent", "orphan"])
+        XCTAssertEqual(layout.childIDsByParent["parent"], ["child-early", "child-late"])
     }
 
     func testStitchRequiresCreationTokenAndSourcePath() {
@@ -28,6 +37,12 @@ final class SocialContractsTests: XCTestCase {
         XCTAssertEqual(stitch.apiPath, "/echoes/echo-active-1/stitches")
         XCTAssertTrue(OpenAPIPaths.all.contains("/echoes/{echoId}/stitches"))
         XCTAssertFalse(StitchComposerDescriptor(sourceEchoID: "echo-active-1", title: "Source card", body: "A linked Echo").isValid(at: now))
+        XCTAssertFalse(StitchComposerDescriptor(sourceEchoID: "echo-active-1", title: "Source card", body: "A linked Echo", creationToken: token, quotedReplyID: "reply-1").isValid(at: now))
+        XCTAssertTrue(StitchComposerDescriptor(sourceEchoID: "echo-active-1", title: "Source card", body: "A linked Echo", creationToken: token, quotedReplyID: "reply-1", quoteWarningAcknowledged: true).isValid(at: now))
+        let revision = ReplyRevisionDescriptor(replyID: "reply-1")
+        XCTAssertEqual(revision.editAPIPath, "/replies/reply-1")
+        XCTAssertEqual(revision.deleteAPIPath, "/replies/reply-1")
+        XCTAssertEqual(revision.historyAPIPath, "/replies/reply-1/history")
     }
 
     func testReportsAreAnonymousAndHideImmediately() {

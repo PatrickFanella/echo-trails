@@ -1,0 +1,9 @@
+.git
+**/node_modules
+**/dist
+**/.build
+**/DerivedData
+ios/
+*.p8
+*.pem
+.env*

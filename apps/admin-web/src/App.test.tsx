@@ -1,48 +1,32 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { renderToString } from "react-dom/server";
-import { App, adminPlaces, buildModerationIntent, canAccess, moderationCases, placeReviewSummary, visibleNavigation } from "./App";
+import { App, adminMutationPath, mutationHeaders, safePreview } from "./App";
 
-describe("Admin web Phase 4 shell", () => {
-  it("renders guarded moderation and Places workflow sections", () => {
+describe("EchoTrails admin client", () => {
+  it("renders a secure role-gated login instead of fixture data", () => {
     const html = renderToString(<App />);
-
-    expect(html).toContain("EchoTrails Admin");
-    expect(html).toContain("Moderation queue");
-    expect(html).toContain("Places review");
-    expect(html).toContain("Non-mutating fixture workflow");
+    expect(html).toContain("Moderator access token");
+    expect(html).toContain("Open secure session");
+    expect(html).not.toContain("Non-mutating fixture workflow");
   });
 
-  it("guards navigation by role", () => {
-    const viewer = { userId: "viewer", displayName: "Viewer", roles: ["viewer" as const] };
-    const nav = visibleNavigation(viewer).map((item) => item.route);
-
-    expect(nav).toEqual(["overview"]);
-    expect(canAccess(viewer, { route: "audit", label: "Audit", requiredRoles: ["admin"] })).toBe(false);
-  });
-
-  it("guards protected panels, not just navigation", () => {
-    const viewer = { userId: "viewer", displayName: "Viewer", roles: ["viewer" as const] };
-    const admin = { userId: "admin", displayName: "Admin", roles: ["admin" as const] };
-
-    expect(renderToString(<App session={viewer} />)).toContain("Role required: moderator or admin.");
-    expect(renderToString(<App session={viewer} />)).toContain("Role required: place admin or admin.");
-    expect(visibleNavigation(admin).map((item) => item.route)).toEqual(["overview", "moderation", "places", "audit"]);
-  });
-
-  it("creates moderation action intents without mutating cases", () => {
-    const [first, second] = moderationCases;
-
-    expect(buildModerationIntent(first)).toEqual({
-      caseId: "case-report-1",
-      action: "limit",
-      requiresSecondReview: false,
-      auditLabel: "limit:echo:echo-active-1",
+  it("attaches CSRF and idempotency protection to mutations", () => {
+    vi.stubGlobal("crypto", { randomUUID: () => "request-1" });
+    expect(mutationHeaders({ role: "admin", csrfToken: "csrf", expiresAt: "later" })).toMatchObject({
+      "X-CSRF-Token": "csrf",
+      "Idempotency-Key": "request-1",
     });
-    expect(buildModerationIntent(second).requiresSecondReview).toBe(true);
   });
 
-  it("flags sensitive Places for boundary review", () => {
-    expect(adminPlaces).toHaveLength(2);
-    expect(placeReviewSummary(adminPlaces[1])).toContain("boundary review required");
+  it("does not expose media in queue summaries", () => {
+    expect(safePreview({ id: "review", kind: "media_review", status: "needs_review", created_at: "2026-01-01" }))
+      .toContain("requires an explicit signed-preview action");
+  });
+
+  it("uses generated operation routes for privileged queue mutations", () => {
+    expect(adminMutationPath("media", "asset/unsafe")).toBe("/admin/media/asset%2Funsafe");
+    expect(adminMutationPath("places", "place-1")).toBe("/admin/places/place-1");
+    expect(adminMutationPath("appeals", "appeal-1")).toBe("/admin/appeals/appeal-1");
+    expect(adminMutationPath("jobs", "job-1")).toBe("/admin/jobs/job-1");
   });
 });

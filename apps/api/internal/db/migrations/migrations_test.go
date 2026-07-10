@@ -107,6 +107,44 @@ func TestDownMigrationDropsCoreTablesAndHonorsDependencyOrder(t *testing.T) {
 	assertBefore(t, downSQL, "DROP TABLE IF EXISTS places;", "DROP TABLE IF EXISTS users;")
 }
 
+func TestReleaseMigrationsIncludeDurableAuthAndDiscoveryState(t *testing.T) {
+	migrations, err := All()
+	if err != nil {
+		t.Fatalf("load migrations: %v", err)
+	}
+	if len(migrations) < 4 {
+		t.Fatalf("expected at least four migrations, got %d", len(migrations))
+	}
+
+	releaseSQL, err := Read(migrations[2].UpPath)
+	if err != nil {
+		t.Fatalf("read release migration: %v", err)
+	}
+	for _, required := range []string{
+		"CREATE EXTENSION IF NOT EXISTS unaccent;",
+		"CREATE EXTENSION IF NOT EXISTS pg_trgm;",
+		"CREATE TABLE creation_authorizations (",
+		"CREATE TABLE echo_rank_snapshots (",
+		"CREATE TABLE notification_preferences (",
+		"Downers Grove Public Library",
+		"Downers Grove North High School",
+	} {
+		assertContains(t, releaseSQL, required)
+	}
+
+	authSQL, err := Read(migrations[3].UpPath)
+	if err != nil {
+		t.Fatalf("read auth migration: %v", err)
+	}
+	for _, required := range []string{
+		"CREATE TABLE email_auth_requests (",
+		"ADD COLUMN access_expires_at timestamptz",
+		"ADD COLUMN handle_changed_at timestamptz",
+	} {
+		assertContains(t, authSQL, required)
+	}
+}
+
 func assertContains(t *testing.T, haystack, needle string) {
 	t.Helper()
 	if !strings.Contains(haystack, needle) {

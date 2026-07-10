@@ -14,10 +14,36 @@ type MemoryStore struct {
 	authRequests          map[string]AuthRequest
 	sessions              map[string]Session
 	sessionsByRefreshHash map[string]string
+	refreshReplays        map[string]Session
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{users: map[string]User{}, usersByEmail: map[string]string{}, authRequests: map[string]AuthRequest{}, sessions: map[string]Session{}, sessionsByRefreshHash: map[string]string{}}
+	return &MemoryStore{users: map[string]User{}, usersByEmail: map[string]string{}, authRequests: map[string]AuthRequest{}, sessions: map[string]Session{}, sessionsByRefreshHash: map[string]string{}, refreshReplays: map[string]Session{}}
+}
+func (m *MemoryStore) RotateSessionRefreshTokenIdempotent(ctx context.Context, currentHash, key, newRefreshHash, newAccessHash string, refreshExpiry, accessExpiry, now time.Time) (Session, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	replayKey := currentHash + ":" + key
+	if session, ok := m.refreshReplays[replayKey]; ok {
+		return session, true, nil
+	}
+	sessionID, ok := m.sessionsByRefreshHash[currentHash]
+	if !ok {
+		return Session{}, false, nil
+	}
+	session := m.sessions[sessionID]
+	if session.RevokedAt != nil || !now.Before(session.ExpiresAt) {
+		return Session{}, false, nil
+	}
+	delete(m.sessionsByRefreshHash, currentHash)
+	session.RefreshTokenHash = newRefreshHash
+	session.AccessTokenHash = newAccessHash
+	session.ExpiresAt = refreshExpiry
+	session.AccessExpiresAt = accessExpiry
+	m.sessions[sessionID] = session
+	m.sessionsByRefreshHash[newRefreshHash] = sessionID
+	m.refreshReplays[replayKey] = session
+	return session, true, nil
 }
 
 func (m *MemoryStore) CreateAuthRequest(_ context.Context, req AuthRequest) error {
@@ -61,7 +87,7 @@ func (m *MemoryStore) FindOrCreateUserByEmail(_ context.Context, email string) (
 	if err != nil {
 		return User{}, err
 	}
-	u := User{ID: id, Email: email}
+	u := User{ID: id, Email: email, Role: "user", Status: "active"}
 	m.users[id] = u
 	m.usersByEmail[email] = id
 	return u, nil
@@ -73,7 +99,18 @@ func (m *MemoryStore) CreateSession(_ context.Context, s Session) error {
 	m.sessionsByRefreshHash[s.RefreshTokenHash] = s.ID
 	return nil
 }
-func (m *MemoryStore) RotateSessionRefreshToken(_ context.Context, currentHash string, newHash string, newExpiresAt time.Time, now time.Time) (Session, bool, error) {
+func (m *MemoryStore) AuthenticateAccessToken(_ context.Context, hash string, now time.Time) (User, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, session := range m.sessions {
+		if session.AccessTokenHash == hash && session.RevokedAt == nil && now.Before(session.AccessExpiresAt) {
+			user, ok := m.users[session.UserID]
+			return user, ok, nil
+		}
+	}
+	return User{}, false, nil
+}
+func (m *MemoryStore) RotateSessionRefreshToken(_ context.Context, currentHash, newRefreshHash, newAccessHash string, newRefreshExpiresAt, newAccessExpiresAt, now time.Time) (Session, bool, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	sessionID, ok := m.sessionsByRefreshHash[currentHash]
@@ -88,10 +125,12 @@ func (m *MemoryStore) RotateSessionRefreshToken(_ context.Context, currentHash s
 		return Session{}, false, nil
 	}
 	delete(m.sessionsByRefreshHash, currentHash)
-	s.RefreshTokenHash = newHash
-	s.ExpiresAt = newExpiresAt
+	s.RefreshTokenHash = newRefreshHash
+	s.AccessTokenHash = newAccessHash
+	s.ExpiresAt = newRefreshExpiresAt
+	s.AccessExpiresAt = newAccessExpiresAt
 	m.sessions[sessionID] = s
-	m.sessionsByRefreshHash[newHash] = sessionID
+	m.sessionsByRefreshHash[newRefreshHash] = sessionID
 	return s, true, nil
 }
 func (m *MemoryStore) RevokeSessionByRefreshTokenHash(_ context.Context, hash string, revokedAt time.Time) (bool, error) {
