@@ -17,6 +17,7 @@ REQUIRED = {
     "infra/deploy/compose.nuc.yaml": ["10.0.0.56:18080:8080", "ECHOTRAILS_APNS_ENABLED: \"false\""],
     "infra/deploy/compose.almaz-moderation.yaml": ["10.0.0.200:18081:8081", "/mnt/impuls/echotrails/model-cache"],
     "infra/deploy/Caddyfile.echotrails": ["api.echotrails.subcult.tv", "import authelia"],
+    "infra/deploy/almaz-echotrails-firewall.sh": ["ALMAZ-ECHOTRAILS-GUARD", "--ctorigdstport"],
     "apps/ios/AppUITests/EchoTrailsUITests.swift": ["testAuthenticationEntryPointsAreReachable", "testAuthenticatedReleaseSurfacesAreReachable"],
     "apps/ios/App/AppModel.swift": ["APNsTokenPrivacy.idempotencyKey(for: token)", "OpenAPIPaths.logoutSession"],
 }

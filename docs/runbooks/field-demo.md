@@ -56,7 +56,11 @@ docker compose --env-file infra/deploy/.env.moderation \
 curl --fail http://10.0.0.200:18081/ready
 ```
 
-Permit port 18081 from `10.0.0.56` only. Validate the deployed models with
+Install `infra/deploy/almaz-echotrails-firewall.sh` under `/usr/local/sbin` and
+its systemd unit under `/etc/systemd/system`, then enable the unit. It inserts a
+dedicated `DOCKER-USER` chain that permits port 18081 from `10.0.0.56` only;
+Almaz's broad LAN UFW rule is not sufficient for a Docker-published port.
+Validate the deployed models with
 `services/moderation/calibrate.py --service-url http://10.0.0.200:18081`.
 
 ## Bootstrap and Places
