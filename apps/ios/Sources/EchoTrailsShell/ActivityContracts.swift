@@ -45,3 +45,69 @@ public struct OutboxActivityDescriptor: Equatable, Sendable {
     public let state: OutboxState
     public let canRetry: Bool
 }
+
+public struct ActivityPageRequest: Equatable, Sendable {
+    public let cursor: String?
+    public let limit: Int
+
+    public init(cursor: String? = nil, limit: Int = 50) {
+        self.cursor = cursor?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.limit = limit
+    }
+
+    public var apiPath: String? {
+        guard (1...100).contains(limit) else { return nil }
+        guard let cursor, !cursor.isEmpty else { return "\(OpenAPIPaths.listNotifications)?limit=\(limit)" }
+        var unreserved = CharacterSet.alphanumerics
+        unreserved.insert(charactersIn: "-._~")
+        guard let encoded = cursor.addingPercentEncoding(withAllowedCharacters: unreserved) else { return nil }
+        return "\(OpenAPIPaths.listNotifications)?limit=\(limit)&cursor=\(encoded)"
+    }
+}
+
+public enum ActivityTargetKind: Equatable, Sendable {
+    case echo
+    case place
+    case moderationAction
+    case none
+
+    public static func resolve(notificationKind: String) -> ActivityTargetKind {
+        switch notificationKind {
+        case "reply", "reaction", "mention", "stitch", "upload", "upload_status": .echo
+        case "place_alert": .place
+        case "moderation", "moderation_update", "moderation_action": .moderationAction
+        default: .none
+        }
+    }
+}
+
+public enum NotificationMuteTarget: String, Sendable {
+    case place = "places"
+    case echo = "echoes"
+}
+
+public struct NotificationMuteDescriptor: Equatable, Sendable {
+    public let target: NotificationMuteTarget
+    public let targetID: String
+
+    public init(target: NotificationMuteTarget, targetID: String) {
+        self.target = target
+        self.targetID = targetID
+    }
+
+    public var apiPath: String? {
+        ContractPath.safeSegment(targetID).map { OpenAPIPaths.putNotificationMute(targetType: target.rawValue, targetId: $0) }
+    }
+}
+
+public struct PlaceSubscriptionDescriptor: Equatable, Sendable {
+    public let placeID: String
+
+    public init(placeID: String) { self.placeID = placeID }
+
+    public var resourceAPIPath: String? {
+        ContractPath.safeSegment(placeID).map { OpenAPIPaths.putPlaceSubscription(placeId: $0) }
+    }
+
+    public static let listAPIPath = OpenAPIPaths.listPlaceSubscriptions
+}

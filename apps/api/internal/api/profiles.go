@@ -16,6 +16,7 @@ var (
 	ErrHandleTaken         = errors.New("handle is already taken")
 	ErrHandleChangeTooSoon = errors.New("handle change cooldown is active")
 	ErrProfileNotFound     = errors.New("profile not found")
+	ErrAvatarNotApproved   = errors.New("avatar image is not approved")
 
 	handlePattern   = regexp.MustCompile(`^[a-z][a-z0-9_]{2,29}$`)
 	reservedHandles = map[string]struct{}{
@@ -25,14 +26,15 @@ var (
 )
 
 type Profile struct {
-	UserID          string
-	Email           string
-	Handle          string
-	DisplayName     string
-	Bio             string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	HandleChangedAt *time.Time
+	UserID             string
+	Email              string
+	Handle             string
+	DisplayName        string
+	Bio                string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	HandleChangedAt    *time.Time
+	AvatarMediaAssetID string
 }
 
 type MeProfile struct {
@@ -44,6 +46,7 @@ type MeProfile struct {
 	CreatedAt               time.Time  `json:"created_at"`
 	UpdatedAt               time.Time  `json:"updated_at"`
 	HandleChangeAvailableAt *time.Time `json:"handle_change_available_at,omitempty"`
+	AvatarURL               string     `json:"avatar_url,omitempty"`
 }
 
 type PublicProfile struct {
@@ -51,6 +54,7 @@ type PublicProfile struct {
 	DisplayName string    `json:"display_name"`
 	Bio         string    `json:"bio,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
+	AvatarURL   string    `json:"avatar_url,omitempty"`
 }
 
 type UpsertProfileRequest struct {
@@ -63,6 +67,25 @@ type ProfileStore interface {
 	GetProfileByUserID(ctx context.Context, userID string) (Profile, bool, error)
 	GetProfileByHandle(ctx context.Context, handle string) (Profile, bool, error)
 	UpsertProfile(ctx context.Context, userID, email string, req UpsertProfileRequest, now time.Time) (Profile, error)
+	SetAvatar(ctx context.Context, userID, mediaAssetID string, now time.Time) (Profile, error)
+	ClearAvatar(ctx context.Context, userID string, now time.Time) (Profile, error)
+}
+
+func (s *MemoryProfileStore) SetAvatar(ctx context.Context, userID, mediaAssetID string, now time.Time) (Profile, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	profile, ok := s.byUserID[userID]
+	if !ok {
+		return Profile{}, ErrProfileNotFound
+	}
+	profile.AvatarMediaAssetID = strings.TrimSpace(mediaAssetID)
+	profile.UpdatedAt = now.UTC()
+	s.byUserID[userID] = profile
+	return profile, nil
+}
+
+func (s *MemoryProfileStore) ClearAvatar(ctx context.Context, userID string, now time.Time) (Profile, error) {
+	return s.SetAvatar(ctx, userID, "", now)
 }
 
 type MemoryProfileStore struct {
@@ -163,11 +186,19 @@ func toMeProfile(profile Profile, now time.Time) MeProfile {
 		UserID: profile.UserID, Email: profile.Email, Handle: profile.Handle,
 		DisplayName: profile.DisplayName, Bio: profile.Bio, CreatedAt: profile.CreatedAt,
 		UpdatedAt: profile.UpdatedAt, HandleChangeAvailableAt: availableAt,
+		AvatarURL: avatarURL(profile.AvatarMediaAssetID),
 	}
 }
 
 func toPublicProfile(profile Profile) PublicProfile {
-	return PublicProfile{Handle: profile.Handle, DisplayName: profile.DisplayName, Bio: profile.Bio, CreatedAt: profile.CreatedAt}
+	return PublicProfile{Handle: profile.Handle, DisplayName: profile.DisplayName, Bio: profile.Bio, CreatedAt: profile.CreatedAt, AvatarURL: avatarURL(profile.AvatarMediaAssetID)}
+}
+
+func avatarURL(mediaAssetID string) string {
+	if strings.TrimSpace(mediaAssetID) == "" {
+		return ""
+	}
+	return "/media/assets/" + mediaAssetID
 }
 
 func normalizeDisplayName(input, fallbackHandle string) string {

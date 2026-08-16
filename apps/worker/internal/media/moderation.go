@@ -71,6 +71,14 @@ func (s StaticSafetyScanner) Scan(_ context.Context, asset Asset) (ModerationRev
 	return ModerationReview{AssetID: asset.ID, Status: status, RiskLevel: risk, Categories: cloneCategories(s.Categories), ScannerName: scannerName}, nil
 }
 
+func (s StaticSafetyScanner) ScanText(_ context.Context, content EchoText) (EchoModerationReview, error) {
+	if s.Err != nil {
+		return EchoModerationReview{}, s.Err
+	}
+	risk := normalizeRisk(s.RiskLevel)
+	return EchoModerationReview{EchoID: content.EchoID, Status: conservativeStatus(ModerationStatusApproved, risk), RiskLevel: risk, Categories: cloneCategories(s.Categories), ScannerName: strings.TrimSpace(s.ScannerName)}, nil
+}
+
 func (p ModerationProcessor) ProcessAsset(ctx context.Context, assetID string) (ModerationReview, error) {
 	if p.Catalog == nil || p.Scanner == nil {
 		return ModerationReview{}, ErrProcessorMisconfigured
@@ -81,7 +89,7 @@ func (p ModerationProcessor) ProcessAsset(ctx context.Context, assetID string) (
 	}
 	review, err := p.Scanner.Scan(ctx, asset)
 	if err != nil {
-		failed := ModerationReview{AssetID: asset.ID, Status: ModerationStatusNeedsReview, RiskLevel: RiskUnknown, FailureReason: err.Error()}
+		failed := ModerationReview{AssetID: asset.ID, Status: ModerationStatusNeedsReview, RiskLevel: RiskUnknown, ScannerName: "scanner-unavailable", FailureReason: err.Error()}
 		return failed, p.Catalog.SaveModerationReview(ctx, failed)
 	}
 	review.AssetID = asset.ID

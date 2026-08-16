@@ -38,12 +38,19 @@ type Session struct {
 	ID               string
 	UserID           string
 	DeviceName       string
+	AccessTokenHash  string
+	AccessExpiresAt  time.Time
 	RefreshTokenHash string
 	ExpiresAt        time.Time
 	RevokedAt        *time.Time
 }
 
-type User struct{ ID, Email string }
+type User struct {
+	ID     string
+	Email  string
+	Role   string
+	Status string
+}
 
 type Store interface {
 	CreateAuthRequest(ctx context.Context, req AuthRequest) error
@@ -51,8 +58,13 @@ type Store interface {
 	ConsumeAuthRequest(ctx context.Context, id string, submittedHash string, now time.Time) (AuthRequest, bool, error)
 	FindOrCreateUserByEmail(ctx context.Context, email string) (User, error)
 	CreateSession(ctx context.Context, s Session) error
-	RotateSessionRefreshToken(ctx context.Context, currentHash string, newHash string, newExpiresAt time.Time, now time.Time) (Session, bool, error)
+	AuthenticateAccessToken(ctx context.Context, hash string, now time.Time) (User, bool, error)
+	RotateSessionRefreshToken(ctx context.Context, currentHash, newRefreshHash, newAccessHash string, newRefreshExpiresAt, newAccessExpiresAt, now time.Time) (Session, bool, error)
 	RevokeSessionByRefreshTokenHash(ctx context.Context, hash string, revokedAt time.Time) (bool, error)
+}
+
+type IdempotentRefreshStore interface {
+	RotateSessionRefreshTokenIdempotent(ctx context.Context, currentHash, idempotencyKey, newRefreshHash, newAccessHash string, newRefreshExpiresAt, newAccessExpiresAt, now time.Time) (Session, bool, error)
 }
 
 type clock interface{ Now() time.Time }

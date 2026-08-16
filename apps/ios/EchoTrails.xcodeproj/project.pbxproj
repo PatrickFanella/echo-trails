@@ -1,0 +1,727 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		20E2937FCA6314369A100085 /* ComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A763BCB106540A888FBE78B /* ComposerView.swift */; };
+		29E02A73985C4FE539DDBA74 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = B808DC356F0FAF44A1CA4A84 /* APIClient.swift */; };
+		32CB29C82E66BA65434B81CB /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C07D8085837CBFD05E946F2F /* AppModel.swift */; };
+		6AE8FC0B63535B0A76912165 /* EchoTrailsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B7B52E5A6FC5D0190B9506A /* EchoTrailsUITests.swift */; };
+		9B069AF1FEE08DCF2BC1C211 /* EchoTrailsAppTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57046D6C426A453649F50790 /* EchoTrailsAppTests.swift */; };
+		9EBC6368A89718185CD5495F /* LocationProof.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D3E83C381E143189300B55E /* LocationProof.swift */; };
+		BF1CF5D52E830B2406941AD0 /* PersistenceModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E768DC23EBBB0040E2B50F3 /* PersistenceModels.swift */; };
+		D36112D848AF6B8A2744C6E8 /* EchoTrailsShell in Frameworks */ = {isa = PBXBuildFile; productRef = 6BCA5DDCA3A6802E190CB52E /* EchoTrailsShell */; };
+		D5A8A998CF49CD30FEC3B69C /* AppealsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69E45D47BB1529D82844632A /* AppealsViews.swift */; };
+		E27C8DD66DD23965494BCFF9 /* EchoTrailsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C43D394E9A2BE211F1E6C0C /* EchoTrailsApp.swift */; };
+		ECE16A1FCD1A77E8779A2C68 /* MainViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E59DFC0BFEC7EBC1F3B61A06 /* MainViews.swift */; };
+		F6D5CA66662CA0BFEC7C790F /* BackgroundUploads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 554FA8244236451F809ED06B /* BackgroundUploads.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		35B24CC1D39A67411C5D7CCD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CE18E4D6618D33F94B5A8D26 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50A4065B585EB6BC99AB4EBE;
+			remoteInfo = EchoTrails;
+		};
+		F8CEF719805787F9F199F640 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CE18E4D6618D33F94B5A8D26 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 50A4065B585EB6BC99AB4EBE;
+			remoteInfo = EchoTrails;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		1D3E83C381E143189300B55E /* LocationProof.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationProof.swift; sourceTree = "<group>"; };
+		3C43D394E9A2BE211F1E6C0C /* EchoTrailsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EchoTrailsApp.swift; sourceTree = "<group>"; };
+		42CEFFFA3F93FC39764D575C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4B7B52E5A6FC5D0190B9506A /* EchoTrailsUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EchoTrailsUITests.swift; sourceTree = "<group>"; };
+		4FE12EACB5AD41018CC199C9 /* EchoTrails.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = EchoTrails.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		554FA8244236451F809ED06B /* BackgroundUploads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundUploads.swift; sourceTree = "<group>"; };
+		57046D6C426A453649F50790 /* EchoTrailsAppTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EchoTrailsAppTests.swift; sourceTree = "<group>"; };
+		69E45D47BB1529D82844632A /* AppealsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppealsViews.swift; sourceTree = "<group>"; };
+		6E768DC23EBBB0040E2B50F3 /* PersistenceModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceModels.swift; sourceTree = "<group>"; };
+		7A763BCB106540A888FBE78B /* ComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComposerView.swift; sourceTree = "<group>"; };
+		7AC4681208B19247C665F50C /* EchoTrailsUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EchoTrailsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		B808DC356F0FAF44A1CA4A84 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		BBAB5741CF46A1D2687F8C5F /* EchoTrailsTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = EchoTrailsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C07D8085837CBFD05E946F2F /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		E59DFC0BFEC7EBC1F3B61A06 /* MainViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViews.swift; sourceTree = "<group>"; };
+		EA051CB0AB6E4D4222C04F7F /* ios */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ios; path = .; sourceTree = SOURCE_ROOT; };
+		F4122002BCDDCBAFFE18486D /* EchoTrails.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = EchoTrails.entitlements; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		98F877DA470C508AF6965CB5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D36112D848AF6B8A2744C6E8 /* EchoTrailsShell in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		07526E2AE9EBA0C0DF99604B /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				EA051CB0AB6E4D4222C04F7F /* ios */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		2765971EFB665312AA6B7757 /* AppTests */ = {
+			isa = PBXGroup;
+			children = (
+				57046D6C426A453649F50790 /* EchoTrailsAppTests.swift */,
+			);
+			path = AppTests;
+			sourceTree = "<group>";
+		};
+		4A2A8973062006ADAA89AE51 = {
+			isa = PBXGroup;
+			children = (
+				7B3E96DDDC80605C97687055 /* App */,
+				2765971EFB665312AA6B7757 /* AppTests */,
+				D0720243B022B3E2C3FD1E23 /* AppUITests */,
+				07526E2AE9EBA0C0DF99604B /* Packages */,
+				F3C1BB8CD260A065CABC1C4B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7B3E96DDDC80605C97687055 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B808DC356F0FAF44A1CA4A84 /* APIClient.swift */,
+				69E45D47BB1529D82844632A /* AppealsViews.swift */,
+				C07D8085837CBFD05E946F2F /* AppModel.swift */,
+				554FA8244236451F809ED06B /* BackgroundUploads.swift */,
+				7A763BCB106540A888FBE78B /* ComposerView.swift */,
+				F4122002BCDDCBAFFE18486D /* EchoTrails.entitlements */,
+				3C43D394E9A2BE211F1E6C0C /* EchoTrailsApp.swift */,
+				42CEFFFA3F93FC39764D575C /* Info.plist */,
+				1D3E83C381E143189300B55E /* LocationProof.swift */,
+				E59DFC0BFEC7EBC1F3B61A06 /* MainViews.swift */,
+				6E768DC23EBBB0040E2B50F3 /* PersistenceModels.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D0720243B022B3E2C3FD1E23 /* AppUITests */ = {
+			isa = PBXGroup;
+			children = (
+				4B7B52E5A6FC5D0190B9506A /* EchoTrailsUITests.swift */,
+			);
+			path = AppUITests;
+			sourceTree = "<group>";
+		};
+		F3C1BB8CD260A065CABC1C4B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4FE12EACB5AD41018CC199C9 /* EchoTrails.app */,
+				BBAB5741CF46A1D2687F8C5F /* EchoTrailsTests.xctest */,
+				7AC4681208B19247C665F50C /* EchoTrailsUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		50A4065B585EB6BC99AB4EBE /* EchoTrails */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FF83909B0784F1B69C430AE2 /* Build configuration list for PBXNativeTarget "EchoTrails" */;
+			buildPhases = (
+				FC8B3E9C2B55F61481B1BAB0 /* Validate Release Configuration */,
+				959A859AEC2519AA6A8A8BD7 /* Sources */,
+				98F877DA470C508AF6965CB5 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = EchoTrails;
+			packageProductDependencies = (
+				6BCA5DDCA3A6802E190CB52E /* EchoTrailsShell */,
+			);
+			productName = EchoTrails;
+			productReference = 4FE12EACB5AD41018CC199C9 /* EchoTrails.app */;
+			productType = "com.apple.product-type.application";
+		};
+		C4940672EAC0E3D3D1C595DD /* EchoTrailsUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9E307F33413F0FDE9DF18155 /* Build configuration list for PBXNativeTarget "EchoTrailsUITests" */;
+			buildPhases = (
+				D40C15206DB9C0E026BEC4BC /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				499BACB546F9197D29AD8FAA /* PBXTargetDependency */,
+			);
+			name = EchoTrailsUITests;
+			packageProductDependencies = (
+			);
+			productName = EchoTrailsUITests;
+			productReference = 7AC4681208B19247C665F50C /* EchoTrailsUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		F39EBFBD724E3DF24F4EF603 /* EchoTrailsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 87950E63E396BD67D8F0AB12 /* Build configuration list for PBXNativeTarget "EchoTrailsTests" */;
+			buildPhases = (
+				E9D1B5FB6D4C6513C00DBED5 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5313E6B0E8429860D256667E /* PBXTargetDependency */,
+			);
+			name = EchoTrailsTests;
+			packageProductDependencies = (
+			);
+			productName = EchoTrailsTests;
+			productReference = BBAB5741CF46A1D2687F8C5F /* EchoTrailsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CE18E4D6618D33F94B5A8D26 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					50A4065B585EB6BC99AB4EBE = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+					C4940672EAC0E3D3D1C595DD = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+						TestTargetID = 50A4065B585EB6BC99AB4EBE;
+					};
+					F39EBFBD724E3DF24F4EF603 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = BB9BBE9F97CEBC707DA56B73 /* Build configuration list for PBXProject "EchoTrails" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 4A2A8973062006ADAA89AE51;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				31E03DDF880F6BB5C3929C99 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F3C1BB8CD260A065CABC1C4B /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				50A4065B585EB6BC99AB4EBE /* EchoTrails */,
+				F39EBFBD724E3DF24F4EF603 /* EchoTrailsTests */,
+				C4940672EAC0E3D3D1C595DD /* EchoTrailsUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FC8B3E9C2B55F61481B1BAB0 /* Validate Release Configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Validate Release Configuration";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$CONFIGURATION\" = \"Release\" ]; then\n  case \"$ECHOTRAILS_API_BASE_URL\" in\n    https://*.example|https://*.example/*|\"\") echo \"error: Set ECHOTRAILS_API_BASE_URL to the deployed HTTPS API origin.\" >&2; exit 1 ;;\n    https://*) ;;\n    *) echo \"error: ECHOTRAILS_API_BASE_URL must use HTTPS for Release.\" >&2; exit 1 ;;\n  esac\n  case \"$ECHOTRAILS_ASSOCIATED_DOMAIN\" in\n    *.example|\"\") echo \"error: Set ECHOTRAILS_ASSOCIATED_DOMAIN to the deployed universal-link host.\" >&2; exit 1 ;;\n  esac\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		959A859AEC2519AA6A8A8BD7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29E02A73985C4FE539DDBA74 /* APIClient.swift in Sources */,
+				32CB29C82E66BA65434B81CB /* AppModel.swift in Sources */,
+				D5A8A998CF49CD30FEC3B69C /* AppealsViews.swift in Sources */,
+				F6D5CA66662CA0BFEC7C790F /* BackgroundUploads.swift in Sources */,
+				20E2937FCA6314369A100085 /* ComposerView.swift in Sources */,
+				E27C8DD66DD23965494BCFF9 /* EchoTrailsApp.swift in Sources */,
+				9EBC6368A89718185CD5495F /* LocationProof.swift in Sources */,
+				ECE16A1FCD1A77E8779A2C68 /* MainViews.swift in Sources */,
+				BF1CF5D52E830B2406941AD0 /* PersistenceModels.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D40C15206DB9C0E026BEC4BC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6AE8FC0B63535B0A76912165 /* EchoTrailsUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9D1B5FB6D4C6513C00DBED5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9B069AF1FEE08DCF2BC1C211 /* EchoTrailsAppTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		499BACB546F9197D29AD8FAA /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50A4065B585EB6BC99AB4EBE /* EchoTrails */;
+			targetProxy = 35B24CC1D39A67411C5D7CCD /* PBXContainerItemProxy */;
+		};
+		5313E6B0E8429860D256667E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 50A4065B585EB6BC99AB4EBE /* EchoTrails */;
+			targetProxy = F8CEF719805787F9F199F640 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		050CD0E83170084053BAD701 /* FieldTest */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ECHOTRAILS_API_BASE_URL = "https://api.echotrails.subcult.tv";
+				ECHOTRAILS_APPLE_SIGN_IN_ENABLED = NO;
+				ECHOTRAILS_PUSH_ENABLED = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = FieldTest;
+		};
+		0B098C9AEDE1C47FCAD1948A /* FieldTest */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrails.fieldtest;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = FieldTest;
+		};
+		14CA04A6E701532BF047B43D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrailsTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EchoTrails.app/EchoTrails";
+			};
+			name = Debug;
+		};
+		2C87211591E676B334C7B297 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrailsTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EchoTrails.app/EchoTrails";
+			};
+			name = Release;
+		};
+		2F069500581E0D43A03CD8CF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/EchoTrails.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrails;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		39D67402D76216984C0585CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ECHOTRAILS_API_BASE_URL = "http://127.0.0.1:8080";
+				ECHOTRAILS_APPLE_SIGN_IN_ENABLED = YES;
+				ECHOTRAILS_APS_ENVIRONMENT = development;
+				ECHOTRAILS_ASSOCIATED_DOMAIN = local.invalid;
+				ECHOTRAILS_PUSH_ENABLED = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Debug;
+		};
+		3AE38840039B0322B1BE2B56 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ECHOTRAILS_API_BASE_URL = "";
+				ECHOTRAILS_APPLE_SIGN_IN_ENABLED = YES;
+				ECHOTRAILS_APS_ENVIRONMENT = production;
+				ECHOTRAILS_ASSOCIATED_DOMAIN = "";
+				ECHOTRAILS_PUSH_ENABLED = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.10;
+			};
+			name = Release;
+		};
+		425DC43268D8D02EF4D890E3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrailsUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = EchoTrails;
+			};
+			name = Debug;
+		};
+		66CAE20871FAD41463ADCAF8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrailsUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = EchoTrails;
+			};
+			name = Release;
+		};
+		8CEF831ED7933C0FD9F3E228 /* FieldTest */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrailsTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/EchoTrails.app/EchoTrails";
+			};
+			name = FieldTest;
+		};
+		AC7B5855A27360AA28A1D0E1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/EchoTrails.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrails;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		D271CE93430E82FAE96232EA /* FieldTest */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = tv.subcult.EchoTrailsUITests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = EchoTrails;
+			};
+			name = FieldTest;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		87950E63E396BD67D8F0AB12 /* Build configuration list for PBXNativeTarget "EchoTrailsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				14CA04A6E701532BF047B43D /* Debug */,
+				8CEF831ED7933C0FD9F3E228 /* FieldTest */,
+				2C87211591E676B334C7B297 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9E307F33413F0FDE9DF18155 /* Build configuration list for PBXNativeTarget "EchoTrailsUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				425DC43268D8D02EF4D890E3 /* Debug */,
+				D271CE93430E82FAE96232EA /* FieldTest */,
+				66CAE20871FAD41463ADCAF8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BB9BBE9F97CEBC707DA56B73 /* Build configuration list for PBXProject "EchoTrails" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				39D67402D76216984C0585CE /* Debug */,
+				050CD0E83170084053BAD701 /* FieldTest */,
+				3AE38840039B0322B1BE2B56 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FF83909B0784F1B69C430AE2 /* Build configuration list for PBXNativeTarget "EchoTrails" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2F069500581E0D43A03CD8CF /* Debug */,
+				0B098C9AEDE1C47FCAD1948A /* FieldTest */,
+				AC7B5855A27360AA28A1D0E1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		31E03DDF880F6BB5C3929C99 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		6BCA5DDCA3A6802E190CB52E /* EchoTrailsShell */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = EchoTrailsShell;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = CE18E4D6618D33F94B5A8D26 /* Project object */;
+}

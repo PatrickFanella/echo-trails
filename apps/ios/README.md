@@ -1,48 +1,52 @@
-# EchoTrails iOS App
+# EchoTrails iOS app
 
-Target location for the clean Swift/SwiftUI iOS app rebuild.
+This is the authoritative iOS 17+ SwiftUI application. The repository-level
+`ios/` directory remains untouched prototype reference material.
 
-The generated prototype currently under the repository-level `ios/` directory is reference-only. New iOS implementation work should be scoped here unless a later issue explicitly says otherwise.
+The app target includes:
 
-Current scope is a Swift Package shell only:
+- passwordless email and Sign in with Apple with Keychain session storage
+- invite and consent onboarding
+- SwiftData Place/Echo/profile caches plus a durable outbox/upload ledger
+- Map, Explore, Activity, Profile, Place detail, and Echo detail surfaces
+- GPS creation proof without persisting or logging exact coordinates
+- text, 1–5 photo, two-minute AAC audio, and one-minute video composition
+- photo/video picker and camera capture
+- a single file-backed background `URLSession` for uploads and relaunch recovery
+- reactions, nested Replies, full Stitches, immutable Reply snapshot warnings,
+  reports/hides, subscriptions, notification preferences, export, and deletion
+- APNs registration, safe Activity refresh, and deep-link intake
+- a server-authoritative release-access bootstrap and an upload-status dashboard
+  covering background transfer, outbox retry, processing, and moderation state
+- Dynamic Type-native SwiftUI controls, VoiceOver labels, offline/outbox states,
+  reduced-motion system behavior, data saver, and Wi-Fi autoplay preferences
 
-- stable app identity constants
-- generated OpenAPI path constants
-- Phase 3 navigation tab names as data
-- environment selection for local/staging/production API base URLs
-- pure Swift API client configuration seams
-- bootstrap state for the eventual SwiftUI app target
-- pure Swift navigation route/state model
-- deep-link parsing contracts for Places, Echoes, profiles, and upload status
-- screen descriptors with titles, accessibility label seeds, required API paths, and auth metadata
-- Linux-safe boundary checks that forbid SwiftUI/MapKit/SwiftData/AuthServices/Security imports until Xcode-scoped issues
-- auth/session contract descriptors for email code, Apple Sign-In exchange, token redaction, and Keychain-ready storage seams
-- Phase 3 contract descriptors for Map, Explore, create flow, SwiftData-ready cache/outbox schema, media composer, Profile/Activity, and accessibility audit surfaces
-- Phase 4 social interaction descriptors for reactions, replies, stitches, reports, blocks, hides, and authenticated action metadata
-- Phase 5 beta access descriptors for invite-required, city-unavailable, waitlist, and accepted states
+The pure `EchoTrailsShell` Swift package remains as the generated-contract and
+Linux-friendly domain layer used by the app.
 
-No runtime auth UI, Keychain storage implementation, SwiftData, runtime networking, MapKit UI, media composer, or upload UI belongs in this baseline issue.
-
-Phase 3 contracts are intentionally data-only. They describe eventual UI state,
-validation, accessibility, and API paths without importing Apple UI/runtime
-frameworks or touching the generated prototype under repository-level `ios/`.
-Auth contracts are data-only: they reference email/Apple/session endpoints,
-redact token previews, and describe Keychain-ready storage without importing
-AuthenticationServices or Security.
-Social contracts are data-only: they reference Phase 4 API paths and validation
-rules for eventual UI without rendering SwiftUI/UIKit views or mutating network
-state.
-
-Verification:
+Generate the Xcode project after changing `project.yml`:
 
 ```bash
-make verify
+cd apps/ios
+xcodegen generate --spec project.yml
 ```
 
-Narrow iOS package check when Swift is installed:
+Compile the app and tests without signing:
 
 ```bash
-swift test --package-path apps/ios
+xcodebuild build-for-testing -project apps/ios/EchoTrails.xcodeproj \
+  -scheme EchoTrails -destination 'generic/platform=iOS' CODE_SIGNING_ALLOWED=NO
 ```
 
-macOS/Xcode project generation remains a later machine-specific step; this package keeps the baseline deterministic in CI.
+`make verify` runs that compile plus the portable Swift package tests. Running
+the iOS tests requires an installed compatible simulator runtime or a signed
+physical test device.
+
+## Personal-Team field build
+
+The `FieldTest` configuration targets `https://api.echotrails.subcult.tv` with
+bundle ID `tv.subcult.EchoTrails.fieldtest`. It deliberately omits APNs,
+Associated Domains, and Sign in with Apple so a Personal Team can install it
+for the first field walk. Email authentication, GPS proof, media capture,
+background upload, and server-backed Activity remain enabled. Release keeps the
+complete production entitlement and configuration checks.

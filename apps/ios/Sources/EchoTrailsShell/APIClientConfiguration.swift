@@ -24,6 +24,6 @@ public struct APIClientConfiguration: Equatable, Sendable {
 
     public func url(for path: String) -> URL {
         let normalizedPath = path.hasPrefix("/") ? String(path.dropFirst()) : path
-        return baseURL.appending(path: normalizedPath)
+        return baseURL.appendingPathComponent(normalizedPath)
     }
 }

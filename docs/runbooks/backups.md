@@ -2,7 +2,11 @@
 
 ## Status
 
-Template only. No production backup or restore has been executed from this repository.
+The disposable Postgres/PostGIS and private-object restore drill is executable with
+`make restore-drill`. It writes operator, commit, backup digest, timestamp, and
+result evidence to `.artifacts/release-drills/restore-drill.json`. A successful
+run against the beta deployment remains a release requirement; local evidence
+does not stand in for production backup execution.
 
 ## Scope
 
@@ -19,12 +23,22 @@ Template only. No production backup or restore has been executed from this repos
 
 ## Restore drill
 
-1. Create isolated restore database.
-2. Restore latest DB dump.
-3. Verify migrations table and seed smoke queries.
-4. Compare media inventory counts.
-5. Run API `/ready` against restored database.
-6. Record timestamp, commit, backup ID, operator, and result.
+For an engineering integration drill, run `make restore-drill`. The command:
+
+1. Starts the disposable PostGIS and private object-storage fixtures.
+2. Applies every migration and inserts relational, PostGIS, and media-object
+   canaries.
+3. Creates a custom-format logical backup and mirrors the private media bucket
+   into an isolated backup bucket.
+4. Restores the database and objects into fresh, isolated destinations.
+5. Compares public schema and object inventory counts, verifies the restored
+   object checksum, and queries the restored spatial canary.
+6. Records timestamp, commit, backup digest, operator, and result.
+
+Before TestFlight distribution, repeat the same procedure against the latest
+beta backup in an isolated restore environment, point the API at that restored
+database, and verify `/ready`. Attach the resulting evidence to the release
+record.
 
 ## Rollback notes
 

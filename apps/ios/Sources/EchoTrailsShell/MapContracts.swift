@@ -76,6 +76,6 @@ public struct PlaceDetailDescriptor: Equatable, Sendable {
     public init(placeID: String) {
         self.placeID = placeID
         self.echoesAPIPath = ContractPath.placeEchoes(placeID) ?? ""
-        self.nearbyAPIPath = "/discovery/nearby"
+        self.nearbyAPIPath = OpenAPIPaths.nearbyPlaces
     }
 }

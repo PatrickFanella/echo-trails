@@ -57,6 +57,31 @@ services:
         && mc mb --ignore-existing local/echotrails-dev
         && mc anonymous set none local/echotrails-dev
 
+  moderation:
+    profiles: ["moderation"]
+    build:
+      context: ../../services/moderation
+    restart: unless-stopped
+    environment:
+      ECHOTRAILS_MODERATION_SERVICE_TOKEN: local-moderation-dev-token
+      ECHOTRAILS_S3_ENDPOINT: http://object-storage:9000
+      AWS_ACCESS_KEY_ID: echotrails
+      AWS_SECRET_ACCESS_KEY: echotrails_dev_password
+      AWS_DEFAULT_REGION: us-east-1
+      ECHOTRAILS_MODEL_DEVICE: cuda
+    depends_on:
+      object-storage-init:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${ECHOTRAILS_LOCAL_MODERATION_PORT:-8081}:8081"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: ["gpu"]
+
 volumes:
   postgres-data:
   redis-data:

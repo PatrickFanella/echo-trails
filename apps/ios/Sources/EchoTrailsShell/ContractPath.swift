@@ -14,14 +14,14 @@ public enum ContractPath {
     }
 
     public static func place(_ placeID: String) -> String? {
-        safeSegment(placeID).map { "/places/\($0)" }
+        safeSegment(placeID).map { OpenAPIPaths.getPlace(placeId: $0) }
     }
 
     public static func placeEchoes(_ placeID: String) -> String? {
-        safeSegment(placeID).map { "/places/\($0)/echoes" }
+        safeSegment(placeID).map { OpenAPIPaths.listPlaceEchoes(placeId: $0) }
     }
 
     public static func userProfile(_ handle: String) -> String? {
-        safeSegment(handle).map { "/users/\($0)" }
+        safeSegment(handle).map { OpenAPIPaths.getPublicProfile(handle: $0) }
     }
 }

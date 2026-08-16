@@ -47,16 +47,16 @@ func TestValidateCreationTokenRequestRejectsRestrictedPlace(t *testing.T) {
 	}
 }
 
-func TestValidateCreationTokenRequestRejectsAmbiguousEligiblePlaces(t *testing.T) {
+func TestValidateCreationTokenRequestUsesExplicitSelectionWhenPlacesOverlap(t *testing.T) {
 	req, cfg := validRequest()
 	req.Places = append(req.Places, Place{
 		ID: "place_neighbor", Status: PlaceActive,
 		Center: Coordinate{Latitude: 45.51525, Longitude: -122.67835}, RadiusMeters: 50,
 	})
 
-	_, err := ValidateCreationTokenRequest(req, cfg)
-	if !errors.Is(err, ErrAmbiguousEligiblePlace) {
-		t.Fatalf("error = %v, want ErrAmbiguousEligiblePlace", err)
+	token, err := ValidateCreationTokenRequest(req, cfg)
+	if err != nil || token.PlaceID != req.SelectedPlace {
+		t.Fatalf("token = %+v error = %v", token, err)
 	}
 }
 
@@ -78,6 +78,33 @@ func TestValidateCreationTokenRequestReturnsSuccessToken(t *testing.T) {
 	}
 	if !token.ExpiresAt.After(token.IssuedAt) {
 		t.Fatalf("token expiration must be after issue time: %+v", token)
+	}
+}
+
+func TestVerifyCreationTokenChecksSignatureBindingAndExpiration(t *testing.T) {
+	req, cfg := validRequest()
+	token, err := ValidateCreationTokenRequest(req, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verified, err := VerifyCreationToken(token.Token, req.UserID, req.SelectedPlace, cfg.Now, cfg.SigningKey)
+	if err != nil || verified.PlaceID != req.SelectedPlace {
+		t.Fatalf("verified = %+v error = %v", verified, err)
+	}
+	for name, candidate := range map[string]string{
+		"tampered": token.Token + "x",
+		"bad user": token.Token,
+	} {
+		userID := req.UserID
+		if name == "bad user" {
+			userID = "usr_other"
+		}
+		if _, err := VerifyCreationToken(candidate, userID, req.SelectedPlace, cfg.Now, cfg.SigningKey); !errors.Is(err, ErrInvalidToken) {
+			t.Fatalf("%s error = %v, want ErrInvalidToken", name, err)
+		}
+	}
+	if _, err := VerifyCreationToken(token.Token, req.UserID, req.SelectedPlace, token.ExpiresAt, cfg.SigningKey); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("expired error = %v, want ErrInvalidToken", err)
 	}
 }
 

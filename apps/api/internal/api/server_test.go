@@ -30,6 +30,9 @@ func doJSON(t *testing.T, handler http.Handler, method, path, body string, heade
 	t.Helper()
 	req := httptest.NewRequest(method, path, strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
+	if method != http.MethodGet && method != http.MethodHead {
+		req.Header.Set("Idempotency-Key", "test-"+strings.ReplaceAll(path, "/", "-"))
+	}
 	for _, headerSet := range headers {
 		for k, v := range headerSet {
 			req.Header.Set(k, v)
@@ -150,14 +153,53 @@ func TestEmailAuthAndSessionFlow(t *testing.T) {
 	if rrsp.RefreshToken == vr.RefreshToken {
 		t.Fatal("expected rotated refresh token")
 	}
+	replayed := doJSON(t, server.Router(), http.MethodPost, "/sessions/refresh", `{"refresh_token":"`+vr.RefreshToken+`"}`)
+	if replayed.Code != http.StatusOK {
+		t.Fatalf("idempotent refresh replay status = %d body=%s", replayed.Code, replayed.Body.String())
+	}
+	var replayResponse VerifyEmailResponse
+	if err := json.NewDecoder(replayed.Body).Decode(&replayResponse); err != nil {
+		t.Fatal(err)
+	}
+	if replayResponse.RefreshToken != rrsp.RefreshToken || replayResponse.AccessToken != rrsp.AccessToken {
+		t.Fatal("refresh replay did not return the same derived token pair")
+	}
 
 	logout := doJSON(t, server.Router(), http.MethodPost, "/sessions/logout", `{"refresh_token":"`+rrsp.RefreshToken+`"}`)
-	if logout.Code != http.StatusOK {
+	if logout.Code != http.StatusNoContent {
 		t.Fatalf("logout status = %d", logout.Code)
 	}
 	again := doJSON(t, server.Router(), http.MethodPost, "/sessions/refresh", `{"refresh_token":"`+rrsp.RefreshToken+`"}`)
 	if again.Code != http.StatusUnauthorized {
 		t.Fatalf("expected revoked token to fail, got %d", again.Code)
+	}
+}
+
+func TestAuthFailuresUseStructuredJSONErrors(t *testing.T) {
+	server := NewServer(Config{})
+	tests := []struct {
+		path, body string
+	}{
+		{path: "/auth/email/start", body: `{"email":`},
+		{path: "/auth/email/start", body: `{"email":"not-an-email"}`},
+		{path: "/auth/email/verify", body: `{"request_id":"missing","code":"000000"}`},
+		{path: "/sessions/refresh", body: `{"refresh_token":"invalid"}`},
+		{path: "/sessions/logout", body: `{"refresh_token":`},
+	}
+	for _, test := range tests {
+		response := doJSON(t, server.Router(), http.MethodPost, test.path, test.body)
+		if response.Code < 400 || response.Header().Get("Content-Type") != "application/json" {
+			t.Fatalf("%s status=%d content-type=%q body=%s", test.path, response.Code, response.Header().Get("Content-Type"), response.Body.String())
+		}
+		var body struct {
+			Error struct {
+				Code  string `json:"code"`
+				Title string `json:"title"`
+			} `json:"error"`
+		}
+		if err := json.NewDecoder(response.Body).Decode(&body); err != nil || body.Error.Code == "" || body.Error.Title == "" {
+			t.Fatalf("%s malformed structured error=%+v err=%v", test.path, body, err)
+		}
 	}
 }
 

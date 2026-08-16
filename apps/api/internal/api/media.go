@@ -43,6 +43,12 @@ type CreateMediaUploadRequest struct {
 	MediaType   string `json:"media_type"`
 	ContentType string `json:"content_type"`
 	ByteSize    int64  `json:"byte_size"`
+	SortOrder   int    `json:"sort_order,omitempty"`
+}
+
+type CreateAvatarUploadRequest struct {
+	ContentType string `json:"content_type"`
+	ByteSize    int64  `json:"byte_size"`
 }
 
 type MediaUploadResponse struct {
@@ -61,9 +67,41 @@ type MediaUploadResponse struct {
 }
 
 type MediaUploadStore interface {
-	CreateUpload(context.Context, CreateMediaUploadRequest, string, time.Time) (MediaUploadResponse, error)
-	GetUpload(context.Context, string) (MediaUploadResponse, error)
-	CompleteUpload(context.Context, string) (MediaUploadResponse, error)
+	CreateUpload(context.Context, string, CreateMediaUploadRequest, string, time.Time) (MediaUploadResponse, error)
+	GetUpload(context.Context, string, string) (MediaUploadResponse, error)
+	CompleteUpload(context.Context, string, string) (MediaUploadResponse, error)
+	RenewUpload(context.Context, string, string, time.Time) (MediaUploadResponse, error)
+}
+
+// AvatarMediaUploadStore keeps profile images on the same private upload,
+// processing, metadata-stripping, and moderation path as Echo photos. Avatar
+// assets have no echo_id and may only be selected after approval.
+type AvatarMediaUploadStore interface {
+	CreateAvatarUpload(context.Context, string, CreateAvatarUploadRequest, string, time.Time) (MediaUploadResponse, error)
+	ValidateAvatarSelection(context.Context, string, string) error
+}
+
+func (s *MemoryMediaUploadStore) RenewUpload(_ context.Context, _ string, uploadID string, now time.Time) (MediaUploadResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	response, ok := s.uploads[uploadID]
+	if !ok {
+		return MediaUploadResponse{}, ErrMediaUploadNotFound
+	}
+	if response.Status == MediaUploadStatusUploaded {
+		return MediaUploadResponse{}, ErrInvalidMediaUpload
+	}
+	response.Status = MediaUploadStatusCreated
+	response.ActivityStatus = MediaActivityStatusCreated
+	response.ExpiresAt = now.Add(15 * time.Minute).UTC()
+	response.UploadURL = strings.TrimRight(s.baseURL, "/") + "/" + response.ObjectKey
+	response.StatusReason = "upload authorization renewed"
+	s.uploads[uploadID] = response
+	return response, nil
+}
+
+type PrivateObjectURLStore interface {
+	GetPrivateObjectURL(context.Context, string) (string, error)
 }
 
 type MemoryMediaUploadStore struct {
@@ -72,6 +110,8 @@ type MemoryMediaUploadStore struct {
 	now         func() time.Time
 	uploads     map[string]MediaUploadResponse
 	idempotency map[string]string
+	avatarOwner map[string]string
+	avatarState map[string]string
 }
 
 func NewMemoryMediaUploadStore() *MemoryMediaUploadStore {
@@ -80,10 +120,65 @@ func NewMemoryMediaUploadStore() *MemoryMediaUploadStore {
 		now:         time.Now,
 		uploads:     map[string]MediaUploadResponse{},
 		idempotency: map[string]string{},
+		avatarOwner: map[string]string{},
+		avatarState: map[string]string{},
 	}
 }
 
-func (s *MemoryMediaUploadStore) CreateUpload(_ context.Context, req CreateMediaUploadRequest, idempotencyKey string, now time.Time) (MediaUploadResponse, error) {
+func (s *MemoryMediaUploadStore) CreateAvatarUpload(_ context.Context, userID string, req CreateAvatarUploadRequest, idempotencyKey string, now time.Time) (MediaUploadResponse, error) {
+	if strings.TrimSpace(userID) == "" || strings.TrimSpace(idempotencyKey) == "" || !validAvatarUpload(req) {
+		return MediaUploadResponse{}, ErrInvalidMediaUpload
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	scopedKey := userID + ":avatar:" + idempotencyKey
+	if uploadID, ok := s.idempotency[scopedKey]; ok {
+		return s.safeResponse(s.uploads[uploadID], now), nil
+	}
+	uploadID := newOpaqueID("upl")
+	assetID := newOpaqueID("ast")
+	objectKey := fmt.Sprintf("media/original/%s/%s", assetID, safeExtension(req.ContentType))
+	response := MediaUploadResponse{UploadID: uploadID, MediaAssetID: assetID, UploadURL: strings.TrimRight(s.baseURL, "/") + "/" + objectKey,
+		Method: "PUT", ObjectKey: objectKey, Status: MediaUploadStatusCreated, ActivityStatus: MediaActivityStatusCreated, ExpiresAt: now.Add(15 * time.Minute).UTC()}
+	s.uploads[uploadID] = response
+	s.idempotency[scopedKey] = uploadID
+	s.avatarOwner[assetID] = userID
+	s.avatarState[assetID] = MediaUploadStatusCreated
+	return response, nil
+}
+
+func (s *MemoryMediaUploadStore) ValidateAvatarSelection(_ context.Context, userID, mediaAssetID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.avatarOwner[mediaAssetID] != userID || s.avatarState[mediaAssetID] != "approved" {
+		return ErrAvatarNotApproved
+	}
+	return nil
+}
+
+// ApproveAvatarAsset is intentionally test/local-memory only. Production
+// approval is written by the conservative moderation worker.
+func (s *MemoryMediaUploadStore) ApproveAvatarAsset(mediaAssetID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.avatarOwner[mediaAssetID]; ok {
+		s.avatarState[mediaAssetID] = "approved"
+	}
+}
+
+func validAvatarUpload(req CreateAvatarUploadRequest) bool {
+	if req.ByteSize <= 0 || req.ByteSize > 10*1024*1024 {
+		return false
+	}
+	for _, contentType := range []string{"image/jpeg", "image/png", "image/heic"} {
+		if req.ContentType == contentType {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *MemoryMediaUploadStore) CreateUpload(_ context.Context, _ string, req CreateMediaUploadRequest, idempotencyKey string, now time.Time) (MediaUploadResponse, error) {
 	if err := validateMediaUpload(req); err != nil {
 		return MediaUploadResponse{}, err
 	}
@@ -121,7 +216,7 @@ func (s *MemoryMediaUploadStore) CreateUpload(_ context.Context, req CreateMedia
 	return response, nil
 }
 
-func (s *MemoryMediaUploadStore) GetUpload(_ context.Context, uploadID string) (MediaUploadResponse, error) {
+func (s *MemoryMediaUploadStore) GetUpload(_ context.Context, _ string, uploadID string) (MediaUploadResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	response, ok := s.uploads[uploadID]
@@ -138,7 +233,7 @@ func (s *MemoryMediaUploadStore) GetUpload(_ context.Context, uploadID string) (
 	return s.safeResponse(response, now), nil
 }
 
-func (s *MemoryMediaUploadStore) CompleteUpload(_ context.Context, uploadID string) (MediaUploadResponse, error) {
+func (s *MemoryMediaUploadStore) CompleteUpload(_ context.Context, _ string, uploadID string) (MediaUploadResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	response, ok := s.uploads[uploadID]
@@ -163,6 +258,9 @@ func (s *MemoryMediaUploadStore) CompleteUpload(_ context.Context, uploadID stri
 	response.ModerationRisk = MediaModerationRiskUnknown
 	response.StatusReason = "upload complete; processing queued"
 	s.uploads[uploadID] = response
+	if _, ok := s.avatarState[response.MediaAssetID]; ok {
+		s.avatarState[response.MediaAssetID] = MediaUploadStatusUploaded
+	}
 	return s.safeResponse(response, now), nil
 }
 
@@ -198,6 +296,9 @@ func validateMediaUpload(req CreateMediaUploadRequest) error {
 	if req.ByteSize <= 0 || req.ByteSize > maxMediaBytes {
 		return ErrInvalidMediaUpload
 	}
+	if req.SortOrder < 0 || req.SortOrder > 4 {
+		return ErrInvalidMediaUpload
+	}
 	allowed, ok := allowedMediaContentTypes[req.MediaType]
 	if !ok {
 		return ErrInvalidMediaUpload
@@ -211,8 +312,8 @@ func validateMediaUpload(req CreateMediaUploadRequest) error {
 }
 
 var allowedMediaContentTypes = map[string][]string{
-	"image": {"image/jpeg", "image/png", "image/heic"},
-	"audio": {"audio/mpeg", "audio/mp4", "audio/wav"},
+	"image": {"image/jpeg", "image/heic"},
+	"audio": {"audio/mp4"},
 	"video": {"video/mp4", "video/quicktime"},
 }
 

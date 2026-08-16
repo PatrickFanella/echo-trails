@@ -1,7 +1,5 @@
 package api
 
-import "time"
-
 type PlaceState string
 
 const (
@@ -24,6 +22,9 @@ type Place struct {
 	State            PlaceState        `json:"state"`
 	Latitude         *float64          `json:"latitude,omitempty"`
 	Longitude        *float64          `json:"longitude,omitempty"`
+	RadiusMeters     float64           `json:"radius_meters,omitempty"`
+	Category         string            `json:"category,omitempty"`
+	Sensitive        bool              `json:"sensitive,omitempty"`
 	Aliases          []string          `json:"aliases,omitempty"`
 	AliasIDs         []string          `json:"alias_ids,omitempty"`
 	ProviderMappings []ProviderMapping `json:"provider_mappings,omitempty"`
@@ -39,14 +40,4 @@ type PlaceRequest struct {
 	ExternalID string   `json:"external_id,omitempty"`
 	Latitude   *float64 `json:"latitude,omitempty"`
 	Longitude  *float64 `json:"longitude,omitempty"`
-}
-
-type EchoSummary struct {
-	ID          string    `json:"id"`
-	PlaceID     string    `json:"place_id"`
-	AuthorID    string    `json:"author_id"`
-	Title       string    `json:"title"`
-	Body        string    `json:"body"`
-	Status      string    `json:"status"`
-	PublishedAt time.Time `json:"published_at"`
 }

@@ -1,55 +1,79 @@
 package api
 
 import (
+	"context"
 	"math"
 	"sort"
 	"strings"
 	"sync"
-	"time"
 )
+
+type PlaceStore interface {
+	SearchPlaces(context.Context, string, bool, *float64, *float64) ([]Place, error)
+	NearbyPlaces(context.Context, float64, float64, int, bool) ([]Place, error)
+	GetPlace(context.Context, string) (Place, bool, error)
+	AllPlaces(context.Context) ([]Place, error)
+	CreatePlaceRequest(context.Context, string, PlaceRequest) (Place, error)
+}
 
 type PlacesStore struct {
 	mu         sync.RWMutex
 	places     map[string]Place
 	placeAlias map[string]string
-	echoes     map[string][]EchoSummary
 }
 
+const (
+	PlacePrincePondID       = "019f486a-0001-7000-8000-000000000001"
+	PlaceMainStreetMetraID  = "019f486a-0002-7000-8000-000000000002"
+	PlaceLibraryID          = "019f486a-0003-7000-8000-000000000003"
+	PlaceTivoliTheatreID    = "019f486a-0004-7000-8000-000000000004"
+	PlaceFishelParkID       = "019f486a-0005-7000-8000-000000000005"
+	PlaceWashingtonParkID   = "019f486a-0006-7000-8000-000000000006"
+	PlaceConstitutionParkID = "019f486a-0007-7000-8000-000000000007"
+	PlaceMuseumID           = "019f486a-0008-7000-8000-000000000008"
+	PlaceNorthHighSchoolID  = "019f486a-0009-7000-8000-000000000009"
+)
+
 func NewStore(initial []Place) *PlacesStore {
-	s := &PlacesStore{places: map[string]Place{}, placeAlias: map[string]string{}, echoes: map[string][]EchoSummary{}}
+	s := &PlacesStore{places: map[string]Place{}, placeAlias: map[string]string{}}
 	for _, p := range initial {
 		s.places[p.ID] = p
 		for _, aliasID := range p.AliasIDs {
 			s.placeAlias[aliasID] = p.ID
 		}
 	}
-	s.echoes["place-active-1"] = []EchoSummary{{
-		ID:          "echo-active-1",
-		PlaceID:     "place-active-1",
-		AuthorID:    "user-seed-1",
-		Title:       "Storm meeting place",
-		Body:        "People gathered here after every big storm.",
-		Status:      "published",
-		PublishedAt: time.Date(2026, 5, 31, 12, 0, 0, 0, time.UTC),
-	}}
 	return s
 }
 
 func DefaultPlaces() []Place {
-	lat1, lon1 := 37.7749, -122.4194
-	lat2, lon2 := 37.7793, -122.4192
-	lat3, lon3 := 37.7810, -122.4170
+	coordinate := func(lat, lon float64) (*float64, *float64) { return &lat, &lon }
+	princeLat, princeLon := coordinate(41.7975912, -88.0153297)
+	metraLat, metraLon := coordinate(41.7955440, -88.0086302)
+	libraryLat, libraryLon := coordinate(41.7940943, -88.0114616)
+	tivoliLat, tivoliLon := coordinate(41.7960844, -88.0088001)
+	fishelLat, fishelLon := coordinate(41.7928667, -88.0116448)
+	washingtonLat, washingtonLon := coordinate(41.7992530, -88.0057961)
+	constitutionLat, constitutionLon := coordinate(41.7907635, -88.0089976)
+	museumLat, museumLon := coordinate(41.7925048, -88.0051168)
+	highSchoolLat, highSchoolLon := coordinate(41.8065417, -88.0122581)
 	return []Place{
-		{ID: "place-active-1", Name: "City Museum", State: PlaceStateActive, Latitude: &lat1, Longitude: &lon1, Aliases: []string{"Museum of the City"}, AliasIDs: []string{"alias-city-museum"}, ProviderMappings: []ProviderMapping{{Provider: "google", ExternalID: "g-100"}}},
-		{ID: "place-restricted-1", Name: "Private Club", State: PlaceStateRestricted, Latitude: &lat2, Longitude: &lon2, Aliases: []string{"Members Club"}, ProviderMappings: []ProviderMapping{{Provider: "apple", ExternalID: "a-200"}}},
-		{ID: "place-pending-1", Name: "Future Plaza", State: PlaceStatePendingReview, Latitude: &lat3, Longitude: &lon3},
-		{ID: "place-rejected-1", Name: "Rejected Cafe", State: PlaceStateRejected, RejectionReason: "duplicate", ReplacementID: "place-active-1"},
-		{ID: "place-merged-1", Name: "Old Museum", State: PlaceStateMerged, CanonicalID: "place-active-1"},
+		{ID: PlacePrincePondID, Name: "Prince Pond", State: PlaceStateActive, Latitude: princeLat, Longitude: princeLon, RadiusMeters: 100, Category: "landmark", Aliases: []string{"Prince Pond Park"}, AliasIDs: []string{"alias-prince-pond"}, ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/35362323"}}},
+		{ID: PlaceMainStreetMetraID, Name: "Downers Grove Main Street Metra", State: PlaceStateActive, Latitude: metraLat, Longitude: metraLon, RadiusMeters: 100, Category: "transit_station", Aliases: []string{"Main Street Station", "Downers Grove Metra"}, ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "node/25779937"}}},
+		{ID: PlaceLibraryID, Name: "Downers Grove Public Library", State: PlaceStateActive, Latitude: libraryLat, Longitude: libraryLon, RadiusMeters: 75, Category: "library", Aliases: []string{"DGPL"}, ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/200192088"}}},
+		{ID: PlaceTivoliTheatreID, Name: "Tivoli Theatre", State: PlaceStateActive, Latitude: tivoliLat, Longitude: tivoliLon, RadiusMeters: 75, Category: "theatre", ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/200218663"}}},
+		{ID: PlaceFishelParkID, Name: "Fishel Park", State: PlaceStateActive, Latitude: fishelLat, Longitude: fishelLon, RadiusMeters: 150, Category: "park", ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/200054182"}}},
+		{ID: PlaceWashingtonParkID, Name: "Washington Park", State: PlaceStateActive, Latitude: washingtonLat, Longitude: washingtonLon, RadiusMeters: 200, Category: "park", ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/552662784"}}},
+		{ID: PlaceConstitutionParkID, Name: "Constitution Park and Lincoln Center", State: PlaceStateActive, Latitude: constitutionLat, Longitude: constitutionLon, RadiusMeters: 200, Category: "park", Aliases: []string{"Constitution Park", "Lincoln Center"}, ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/567113043"}}},
+		{ID: PlaceMuseumID, Name: "Downers Grove Museum", State: PlaceStateActive, Latitude: museumLat, Longitude: museumLon, RadiusMeters: 100, Category: "museum", Aliases: []string{"Wandschneider Park"}, ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/684600471"}}},
+		{ID: PlaceNorthHighSchoolID, Name: "Downers Grove North High School", State: PlaceStateRestricted, Latitude: highSchoolLat, Longitude: highSchoolLon, RadiusMeters: 250, Category: "school", Sensitive: true, ProviderMappings: []ProviderMapping{{Provider: "openstreetmap", ExternalID: "way/548571172"}}},
+		{ID: "place-pending-1", Name: "Future Plaza", State: PlaceStatePendingReview, RadiusMeters: 100},
+		{ID: "place-rejected-1", Name: "Rejected Place", State: PlaceStateRejected, RejectionReason: "duplicate", ReplacementID: PlacePrincePondID},
+		{ID: "place-merged-1", Name: "Prince Pond Playground", State: PlaceStateMerged, CanonicalID: PlacePrincePondID},
 		{ID: "place-removed-1", Name: "Removed Diner", State: PlaceStateRemoved},
 	}
 }
 
-func (s *PlacesStore) Search(query string, includeRestricted bool) []Place {
+func (s *PlacesStore) SearchPlaces(_ context.Context, query string, includeRestricted bool, _, _ *float64) ([]Place, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	q := strings.ToLower(strings.TrimSpace(query))
@@ -66,10 +90,10 @@ func (s *PlacesStore) Search(query string, includeRestricted bool) []Place {
 		}
 	}
 	sortPlaces(out)
-	return out
+	return out, nil
 }
 
-func (s *PlacesStore) Nearby(lat, lon float64, radiusMeters int, includeRestricted bool) []Place {
+func (s *PlacesStore) NearbyPlaces(_ context.Context, lat, lon float64, radiusMeters int, includeRestricted bool) ([]Place, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	var out []Place
@@ -88,36 +112,11 @@ func (s *PlacesStore) Nearby(lat, lon float64, radiusMeters int, includeRestrict
 		}
 	}
 	sortPlaces(out)
-	return out
+	return out, nil
 }
 
 func sortPlaces(places []Place) {
 	sort.Slice(places, func(i, j int) bool { return places[i].ID < places[j].ID })
-}
-
-func (s *PlacesStore) Echoes(placeID string, limit int) []EchoSummary {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if limit <= 0 || limit > 50 {
-		limit = 20
-	}
-	echoes := append([]EchoSummary(nil), s.echoes[placeID]...)
-	if len(echoes) > limit {
-		return echoes[:limit]
-	}
-	return echoes
-}
-
-func (s *PlacesStore) EchoAuthors() map[string]string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	authors := map[string]string{}
-	for _, echoes := range s.echoes {
-		for _, echo := range echoes {
-			authors[echo.ID] = echo.AuthorID
-		}
-	}
-	return authors
 }
 
 func distanceMeters(lat1, lon1, lat2, lon2 float64) float64 {
@@ -147,23 +146,33 @@ func matchesPlace(p Place, q string) bool {
 	return false
 }
 
-func (s *PlacesStore) Get(id string) (Place, bool) {
+func (s *PlacesStore) GetPlace(_ context.Context, id string) (Place, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if targetID, ok := s.placeAlias[id]; ok {
-		return Place{ID: id, State: PlaceStateMerged, CanonicalID: targetID}, true
+		return Place{ID: id, State: PlaceStateMerged, CanonicalID: targetID}, true, nil
 	}
 	p, ok := s.places[id]
-	return p, ok
+	return p, ok, nil
 }
 
-func (s *PlacesStore) CreateRequest(req PlaceRequest) Place {
+func (s *PlacesStore) AllPlaces(_ context.Context) ([]Place, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make([]Place, 0, len(s.places))
+	for _, place := range s.places {
+		result = append(result, place)
+	}
+	return result, nil
+}
+
+func (s *PlacesStore) CreatePlaceRequest(_ context.Context, _ string, req PlaceRequest) (Place, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	id := "request-" + slug(req.Name)
 	p := Place{ID: id, Name: req.Name, State: PlaceStatePendingReview, Aliases: filterEmpty([]string{req.Alias}), ProviderMappings: filterMappings(req.Provider, req.ExternalID), Latitude: req.Latitude, Longitude: req.Longitude}
 	s.places[id] = p
-	return p
+	return p, nil
 }
 
 func slug(s string) string {

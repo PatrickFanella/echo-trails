@@ -18,7 +18,7 @@ public struct BetaAccessDescriptor: Equatable, Sendable {
         self.inviteCode = inviteCode
     }
 
-    public var apiPath: String { "/beta/access" }
+    public var apiPath: String { OpenAPIPaths.evaluateBetaAccess }
 
     public var allowsEntry: Bool { state == .accepted }
 

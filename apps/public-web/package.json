@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
-    "vite": "latest",
+    "vite": "8.1.4",
     "typescript": "latest",
     "vitest": "latest",
     "react": "latest",

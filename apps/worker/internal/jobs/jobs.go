@@ -9,9 +9,15 @@ import (
 )
 
 const (
-	TypeProcessMedia       = "process_media"
-	TypeGenerateTranscript = "generate_transcript"
-	TypeScanMediaSafety    = "scan_media_safety"
+	TypeProcessMedia        = "process_media"
+	TypeGenerateTranscript  = "generate_transcript"
+	TypeScanMediaSafety     = "scan_media_safety"
+	TypeRenderReplySnapshot = "render_reply_snapshot"
+	TypeSendPush            = "send_push"
+	TypeRankEcho            = "rank_echo"
+	TypePrivacyExport       = "privacy_export"
+	TypePrivacyDelete       = "privacy_delete"
+	TypeScanEchoSafety      = "scan_echo_safety"
 )
 
 var ErrNoJobs = errors.New("no jobs available")
@@ -24,6 +30,7 @@ type Job struct {
 	Attempts       int
 	MaxAttempts    int
 	AvailableAt    time.Time
+	ReceiptID      string `json:"-"`
 }
 
 func New(id, jobType, assetID string) Job {
@@ -206,7 +213,7 @@ func validateJob(job Job) error {
 
 func validJobType(jobType string) bool {
 	switch jobType {
-	case TypeProcessMedia, TypeGenerateTranscript, TypeScanMediaSafety:
+	case TypeProcessMedia, TypeGenerateTranscript, TypeScanMediaSafety, TypeRenderReplySnapshot, TypeSendPush, TypeRankEcho, TypePrivacyExport, TypePrivacyDelete, TypeScanEchoSafety:
 		return true
 	default:
 		return false

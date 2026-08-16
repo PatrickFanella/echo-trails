@@ -1,12 +1,16 @@
 package api
 
 import (
+	"crypto/rand"
 	"errors"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"git.subcult.tv/subculture-collective/echo-trails/apps/api/internal/primitives/uuidv7"
 )
 
 const (
@@ -24,22 +28,30 @@ const (
 	NotificationReaction = "reaction"
 	NotificationReply    = "reply"
 	NotificationStitch   = "stitch"
+	NotificationMention  = "mention"
 )
+
+var replyMentionPattern = regexp.MustCompile(`(?i)(?:^|[^\pL\pN_])@([a-z][a-z0-9_]{2,29})(?:\b|$)`)
 
 var ErrSocialInvalid = errors.New("invalid social request")
 var ErrSocialNotFound = errors.New("social target not found")
 var ErrSocialHidden = errors.New("social target hidden")
+var ErrSocialForbidden = errors.New("social action forbidden")
 
 type SocialStore struct {
-	mu            sync.RWMutex
-	echoAuthors   map[string]string
-	reactions     map[string]Reaction
-	replies       map[string][]Reply
-	stitches      map[string][]Stitch
-	reports       []Report
-	hides         map[string]map[string]bool
-	blocks        map[string]map[string]bool
-	notifications []Notification
+	mu             sync.RWMutex
+	echoAuthors    map[string]string
+	reactions      map[string]Reaction
+	replies        map[string][]Reply
+	replyRevisions map[string][]ReplyRevision
+	stitches       map[string][]Stitch
+	reports        []Report
+	hides          map[string]map[string]bool
+	blocks         map[string]map[string]bool
+	notifications  []Notification
+	userByHandle   map[string]string
+	handleByUser   map[string]string
+	replyMentions  map[string]map[string]bool
 }
 
 func NewSocialStore() *SocialStore {
@@ -53,11 +65,40 @@ func NewSocialStoreWithEchoAuthors(echoAuthors map[string]string) *SocialStore {
 			authors[echoID] = authorID
 		}
 	}
-	return &SocialStore{echoAuthors: authors, reactions: map[string]Reaction{}, replies: map[string][]Reply{}, stitches: map[string][]Stitch{}, hides: map[string]map[string]bool{}, blocks: map[string]map[string]bool{}}
+	return &SocialStore{echoAuthors: authors, reactions: map[string]Reaction{}, replies: map[string][]Reply{}, replyRevisions: map[string][]ReplyRevision{}, stitches: map[string][]Stitch{}, hides: map[string]map[string]bool{}, blocks: map[string]map[string]bool{}, userByHandle: map[string]string{}, handleByUser: map[string]string{}, replyMentions: map[string]map[string]bool{}}
+}
+
+// RegisterParticipantHandle supplies the local-memory adapter with the same
+// handle directory Postgres gets from user_profiles. Production never trusts a
+// handle from a Reply request itself.
+func (s *SocialStore) RegisterParticipantHandle(userID, handle string) {
+	handle, err := ValidateHandle(handle)
+	if err != nil || !validSocialID(userID) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.userByHandle[handle] = userID
+	s.handleByUser[userID] = handle
+}
+
+func parseReplyMentionHandles(body string) []string {
+	matches := replyMentionPattern.FindAllStringSubmatch(body, -1)
+	seen := make(map[string]struct{}, len(matches))
+	result := make([]string, 0, len(matches))
+	for _, match := range matches {
+		handle := NormalizeHandle(match[1])
+		if _, exists := seen[handle]; exists {
+			continue
+		}
+		seen[handle] = struct{}{}
+		result = append(result, handle)
+	}
+	return result
 }
 
 type ReactionRequest struct {
-	UserID string `json:"user_id"`
+	UserID string `json:"-"`
 	Kind   string `json:"kind"`
 }
 
@@ -74,44 +115,67 @@ type ReactionSummary struct {
 }
 
 type ReplyRequest struct {
-	UserID  string `json:"user_id"`
+	UserID  string `json:"-"`
 	Body    string `json:"body"`
 	ReplyTo string `json:"reply_to,omitempty"`
 }
 
 type Reply struct {
-	ID       string    `json:"id"`
-	EchoID   string    `json:"echo_id"`
-	UserID   string    `json:"user_id"`
-	Body     string    `json:"body"`
-	ReplyTo  string    `json:"reply_to,omitempty"`
-	Edited   bool      `json:"edited"`
-	Hidden   bool      `json:"hidden,omitempty"`
-	PostedAt time.Time `json:"posted_at"`
-}
-
-type StitchRequest struct {
-	UserID       string `json:"user_id"`
-	SourceEchoID string `json:"source_echo_id"`
-	Title        string `json:"title"`
-	Body         string `json:"body"`
-}
-
-type Stitch struct {
 	ID           string    `json:"id"`
 	EchoID       string    `json:"echo_id"`
 	UserID       string    `json:"user_id"`
-	SourceEchoID string    `json:"source_echo_id"`
-	Title        string    `json:"title"`
+	AuthorHandle string    `json:"author_handle"`
 	Body         string    `json:"body"`
-	CreatedAt    time.Time `json:"created_at"`
+	ReplyTo      string    `json:"reply_to,omitempty"`
+	Edited       bool      `json:"edited"`
+	Hidden       bool      `json:"hidden,omitempty"`
+	PostedAt     time.Time `json:"posted_at"`
+}
+
+type ReplyRevision struct {
+	RevisionNumber int       `json:"revision_number"`
+	Body           string    `json:"body"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+type ReplyPage struct {
+	Replies    []Reply `json:"replies"`
+	NextCursor string  `json:"next_cursor,omitempty"`
+}
+
+type StitchRequest struct {
+	UserID                   string          `json:"-"`
+	SourceEchoID             string          `json:"source_echo_id"`
+	PlaceID                  string          `json:"place_id,omitempty"`
+	ContentMode              EchoContentMode `json:"content_mode,omitempty"`
+	Title                    string          `json:"title"`
+	Body                     string          `json:"body,omitempty"`
+	CaptionText              string          `json:"caption_text,omitempty"`
+	CreationToken            string          `json:"creation_token,omitempty"`
+	QuotedReplyID            string          `json:"quoted_reply_id,omitempty"`
+	QuoteWarningAcknowledged bool            `json:"quote_warning_acknowledged,omitempty"`
+}
+
+type Stitch struct {
+	ID            string    `json:"id"`
+	EchoID        string    `json:"echo_id"`
+	UserID        string    `json:"user_id"`
+	SourceEchoID  string    `json:"source_echo_id"`
+	Title         string    `json:"title"`
+	Body          string    `json:"body"`
+	CreatedAt     time.Time `json:"created_at"`
+	Status        string    `json:"status,omitempty"`
+	QuotedReplyID string    `json:"quoted_reply_id,omitempty"`
 }
 
 type ReportRequest struct {
-	ReporterID string `json:"reporter_id"`
-	TargetType string `json:"target_type"`
-	TargetID   string `json:"target_id"`
-	Reason     string `json:"reason"`
+	ReporterID   string `json:"-"`
+	TargetType   string `json:"target_type"`
+	TargetID     string `json:"target_id,omitempty"`
+	TargetHandle string `json:"target_handle,omitempty"`
+	Category     string `json:"category"`
+	Details      string `json:"details,omitempty"`
+	Reason       string `json:"reason,omitempty"` // accepted for older beta clients
 }
 
 type Report struct {
@@ -119,24 +183,37 @@ type Report struct {
 	ReporterID string    `json:"reporter_id"`
 	TargetType string    `json:"target_type"`
 	TargetID   string    `json:"target_id"`
+	Category   string    `json:"category"`
+	Details    string    `json:"details,omitempty"`
 	Reason     string    `json:"reason"`
 	Status     string    `json:"status"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
 type VisibilityRequest struct {
-	UserID   string `json:"user_id"`
+	UserID   string `json:"-"`
 	TargetID string `json:"target_id"`
 }
 
+type BlockRequest struct {
+	TargetID     string `json:"target_id,omitempty"`
+	TargetHandle string `json:"target_handle,omitempty"`
+}
+
 type Notification struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	Kind      string    `json:"kind"`
-	ActorID   string    `json:"actor_id"`
-	TargetID  string    `json:"target_id"`
-	Preview   string    `json:"preview"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Kind      string     `json:"kind"`
+	ActorID   string     `json:"actor_id"`
+	TargetID  string     `json:"target_id"`
+	Preview   string     `json:"preview"`
+	CreatedAt time.Time  `json:"created_at"`
+	ReadAt    *time.Time `json:"read_at,omitempty"`
+}
+
+type NotificationPage struct {
+	Notifications []Notification `json:"notifications"`
+	NextCursor    string         `json:"next_cursor,omitempty"`
 }
 
 func (s *SocialStore) PutReaction(echoID string, req ReactionRequest, now time.Time) (ReactionSummary, error) {
@@ -172,6 +249,15 @@ func (s *SocialStore) EchoKnown(echoID string) bool {
 	return validSocialID(echoID) && s.echoAuthors[echoID] != ""
 }
 
+func (s *SocialStore) RegisterEcho(echoID, authorID string) {
+	if !validSocialID(echoID) || !validSocialID(authorID) {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.echoAuthors[echoID] = authorID
+}
+
 func (s *SocialStore) reactionSummaryLocked(echoID string) ReactionSummary {
 	totals := emptyReactionTotals()
 	for _, reaction := range s.reactions {
@@ -199,10 +285,43 @@ func (s *SocialStore) AddReply(echoID string, req ReplyRequest, now time.Time) (
 	if req.ReplyTo != "" && !s.replyExists(echoID, req.ReplyTo) {
 		return Reply{}, ErrSocialInvalid
 	}
-	reply := Reply{ID: nextSocialID("reply", len(s.replies[echoID])+1), EchoID: echoID, UserID: req.UserID, Body: body, ReplyTo: req.ReplyTo, PostedAt: now.UTC()}
+	replyID, err := uuidv7.NewAt(now, rand.Reader)
+	if err != nil {
+		return Reply{}, err
+	}
+	handle := s.handleByUser[req.UserID]
+	if handle == "" {
+		// Memory repositories support older unit fixtures without account setup.
+		// Production always resolves this field from user_profiles.
+		handle = req.UserID
+	}
+	reply := Reply{ID: replyID.String(), EchoID: echoID, UserID: req.UserID, AuthorHandle: handle, Body: body, ReplyTo: req.ReplyTo, PostedAt: now.UTC()}
 	s.replies[echoID] = append(s.replies[echoID], reply)
+	s.replyRevisions[reply.ID] = []ReplyRevision{{RevisionNumber: 1, Body: body, CreatedAt: now.UTC()}}
 	s.notifyLocked(Notification{UserID: authorID, Kind: NotificationReply, ActorID: req.UserID, TargetID: echoID, Preview: "Someone replied to your Echo.", CreatedAt: now.UTC()})
+	s.syncReplyMentionsLocked(reply, body, map[string]bool{authorID: true}, now)
 	return reply, nil
+}
+
+func (s *SocialStore) syncReplyMentionsLocked(reply Reply, body string, alreadyNotified map[string]bool, now time.Time) {
+	participants := map[string]bool{s.echoAuthors[reply.EchoID]: true}
+	for _, existingReply := range s.replies[reply.EchoID] {
+		participants[existingReply.UserID] = true
+	}
+	previous := s.replyMentions[reply.ID]
+	current := map[string]bool{}
+	for _, handle := range parseReplyMentionHandles(body) {
+		mentionedUserID := s.userByHandle[handle]
+		if mentionedUserID == "" || mentionedUserID == reply.UserID || !participants[mentionedUserID] ||
+			s.blocked(mentionedUserID, reply.UserID) || s.blocked(reply.UserID, mentionedUserID) {
+			continue
+		}
+		current[mentionedUserID] = true
+		if !previous[mentionedUserID] && !alreadyNotified[mentionedUserID] {
+			s.notifyLocked(Notification{UserID: mentionedUserID, Kind: NotificationMention, ActorID: reply.UserID, TargetID: reply.EchoID, Preview: "Someone mentioned you in a Reply.", CreatedAt: now.UTC()})
+		}
+	}
+	s.replyMentions[reply.ID] = current
 }
 
 func (s *SocialStore) ListReplies(echoID, viewerID string) []Reply {
@@ -246,10 +365,17 @@ func (s *SocialStore) AddStitch(req StitchRequest, now time.Time) (Stitch, error
 func (s *SocialStore) AddReport(req ReportRequest, now time.Time) (Report, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !validSocialID(req.ReporterID) || !validSocialID(req.TargetID) || !validReportTarget(req.TargetType) || strings.TrimSpace(req.Reason) == "" || len(req.Reason) > 500 {
+	category, details, valid := normalizeReport(req)
+	if req.TargetType == ReportTargetUser && req.TargetID == "" {
+		handle, err := ValidateHandle(req.TargetHandle)
+		if err == nil {
+			req.TargetID = s.userByHandle[handle]
+		}
+	}
+	if !validSocialID(req.ReporterID) || !validSocialID(req.TargetID) || req.ReporterID == req.TargetID || !validReportTarget(req.TargetType) || !valid {
 		return Report{}, ErrSocialInvalid
 	}
-	report := Report{ID: nextSocialID("report", len(s.reports)+1), ReporterID: req.ReporterID, TargetType: req.TargetType, TargetID: req.TargetID, Reason: strings.TrimSpace(req.Reason), Status: "pending_review", CreatedAt: now.UTC()}
+	report := Report{ID: nextSocialID("report", len(s.reports)+1), ReporterID: req.ReporterID, TargetType: req.TargetType, TargetID: req.TargetID, Category: category, Details: details, Reason: details, Status: "pending_review", CreatedAt: now.UTC()}
 	s.reports = append(s.reports, report)
 	return report, nil
 }
@@ -327,6 +453,22 @@ func validSocialID(id string) bool {
 
 func validReportTarget(target string) bool {
 	return target == ReportTargetEcho || target == ReportTargetReply || target == ReportTargetUser
+}
+
+func normalizeReport(request ReportRequest) (string, string, bool) {
+	category := strings.TrimSpace(request.Category)
+	details := strings.TrimSpace(request.Details)
+	if category == "" && strings.TrimSpace(request.Reason) != "" {
+		category, details = "other", strings.TrimSpace(request.Reason)
+	}
+	validCategories := map[string]bool{
+		"harassment": true, "hate": true, "sexual_content": true,
+		"violence_threat": true, "illegal_dangerous": true,
+		"privacy_location_safety": true, "spam_scam": true,
+		"misinformation": true, "sensitive_place": true,
+		"intellectual_property": true, "other": true,
+	}
+	return category, details, validCategories[category] && len([]rune(details)) <= 500
 }
 
 func validReactionKind(kind string) bool {

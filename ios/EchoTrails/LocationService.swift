@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import Observation
 
 
 @Observable
@@ -41,4 +42,25 @@ class LocationService: NSObject, CLLocationManagerDelegate {
     }
 
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let latestLocation = locations.last else { return }
+
+        location = latestLocation
+        geocoder.reverseGeocodeLocation(latestLocation) { [weak self] placemarks, _ in
+            guard let self else { return }
+            let placemark = placemarks?.first
+            let name = [placemark?.name, placemark?.locality]
+                .compactMap { $0 }
+                .joined(separator: ", ")
+            self.placeName = name
+        }
+    }
+
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
+    }
+
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        placeName = ""
+    }
+}

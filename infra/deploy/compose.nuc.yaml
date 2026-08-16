@@ -1,0 +1,124 @@
+name: echotrails-field
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${ECHOTRAILS_POSTGRES_DB:-echotrails}
+      POSTGRES_USER: ${ECHOTRAILS_POSTGRES_USER:-echotrails}
+      POSTGRES_PASSWORD: ${ECHOTRAILS_POSTGRES_PASSWORD:?set ECHOTRAILS_POSTGRES_PASSWORD}
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  migrations:
+    image: migrate/migrate:v4.18.3
+    depends_on:
+      postgres: {condition: service_healthy}
+    volumes: [../../apps/api/db/migrations:/migrations:ro]
+    command: [-path, /migrations, -database, "${ECHOTRAILS_DATABASE_URL:?set ECHOTRAILS_DATABASE_URL}", up]
+    restart: on-failure:5
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes"]
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  object-storage:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    restart: unless-stopped
+    command: [server, /data]
+    environment:
+      MINIO_ROOT_USER: ${ECHOTRAILS_S3_ACCESS_KEY_ID:?set ECHOTRAILS_S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${ECHOTRAILS_S3_SECRET_ACCESS_KEY:?set ECHOTRAILS_S3_SECRET_ACCESS_KEY}
+    volumes: [object-storage-data:/data]
+    ports: ["10.0.0.56:19000:9000"]
+    healthcheck:
+      test: [CMD, mc, ready, local]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  object-storage-init:
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      object-storage: {condition: service_healthy}
+    entrypoint: [/bin/sh, -c]
+    command:
+      - >-
+        mc alias set local http://object-storage:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" &&
+        mc mb --ignore-existing "local/${ECHOTRAILS_S3_BUCKET:-echotrails-media-field}" &&
+        mc anonymous set none "local/${ECHOTRAILS_S3_BUCKET:-echotrails-media-field}"
+    environment:
+      MINIO_ROOT_USER: ${ECHOTRAILS_S3_ACCESS_KEY_ID:?set ECHOTRAILS_S3_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${ECHOTRAILS_S3_SECRET_ACCESS_KEY:?set ECHOTRAILS_S3_SECRET_ACCESS_KEY}
+    restart: "no"
+
+  clamav:
+    image: clamav/clamav:1.4
+    restart: unless-stopped
+    volumes: [clamav-data:/var/lib/clamav]
+    healthcheck:
+      test: [CMD-SHELL, "echo PING | nc 127.0.0.1 3310 | grep PONG"]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 2m
+
+  api:
+    build: {context: ../.., dockerfile: apps/api/Dockerfile}
+    restart: unless-stopped
+    env_file:
+      - path: .env.field
+        required: false
+    environment:
+      ECHOTRAILS_S3_ENDPOINT: http://object-storage:9000
+    ports: ["10.0.0.56:18080:8080"]
+    depends_on:
+      migrations: {condition: service_completed_successfully}
+      object-storage-init: {condition: service_completed_successfully}
+
+  worker:
+    build: {context: ../.., dockerfile: apps/worker/Dockerfile}
+    restart: unless-stopped
+    env_file:
+      - path: .env.field
+        required: false
+    environment:
+      ECHOTRAILS_S3_ENDPOINT: http://object-storage:9000
+      ECHOTRAILS_MODERATION_SERVICE_URL: http://10.0.0.200:18081
+      ECHOTRAILS_APNS_ENABLED: "false"
+    depends_on:
+      migrations: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+      object-storage-init: {condition: service_completed_successfully}
+      clamav: {condition: service_healthy}
+
+  admin-web:
+    build: {context: ../.., dockerfile: apps/admin-web/Dockerfile}
+    restart: unless-stopped
+    ports: ["10.0.0.56:18082:8080"]
+    depends_on: [api]
+
+  public-web:
+    build: {context: ../.., dockerfile: apps/public-web/Dockerfile}
+    restart: unless-stopped
+    environment:
+      ECHOTRAILS_APPLE_APP_ID: ${ECHOTRAILS_APPLE_APP_ID:-UNCONFIGURED.tv.subcult.EchoTrails}
+    ports: ["10.0.0.56:18083:8080"]
+
+volumes:
+  postgres-data:
+  redis-data:
+  object-storage-data:
+  clamav-data:

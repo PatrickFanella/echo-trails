@@ -7,7 +7,9 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCES = ROOT / "Sources" / "EchoTrailsShell"
+APP = ROOT / "App"
 TESTS = ROOT / "Tests" / "EchoTrailsShellTests"
+GENERATED_PATHS = SOURCES / "Generated" / "OpenAPIPaths.swift"
 
 FORBIDDEN_IMPORTS = [
     "SwiftUI",
@@ -31,7 +33,7 @@ REQUIRED_SNIPPETS = {
     SOURCES / "NavigationRoute.swift": ["case placeDetail", "case echoDetail", "case userProfile", "case mediaUploadStatus", "requiresAuthentication"],
     SOURCES / "NavigationState.swift": ["ScreenDescriptor", "requiredAPIPath", "accessibilityLabel"],
     TESTS / "NavigationShellTests.swift": ["testDefaultNavigationStartsOnMapTab", "testDeepLinkParsingForCoreRoutes", "testRejectsUnsafeOrUnknownRoutes"],
-    SOURCES / "MapContracts.swift": ["CoordinateValue", "PlaceMarkerDescriptor", "PublicLocationPrecision", "/discovery/nearby"],
+    SOURCES / "MapContracts.swift": ["CoordinateValue", "PlaceMarkerDescriptor", "PublicLocationPrecision", "OpenAPIPaths.nearbyPlaces"],
     SOURCES / "ExploreContracts.swift": ["ExploreSearchQuery", "ExploreScope", "ExploreSectionDescriptor", "RankingReason"],
     SOURCES / "CreateEchoContracts.swift": ["EchoDraft", "EchoDraftValidation", "CreationTokenDescriptor", "CreateFlowStep"],
     SOURCES / "LocalPersistenceContracts.swift": ["LocalCacheEntityDescriptor", "swiftDataReadyEntities", "serverSourced"],
@@ -47,7 +49,12 @@ REQUIRED_SNIPPETS = {
     TESTS / "SocialContractsTests.swift": ["testReactionTypesAndPathMatchOpenAPI", "testRepliesAreOneLevelAndBounded", "testReportsAreAnonymousAndHideImmediately", "testBlocksAndHidesUseSafetyPathsAndFilteringSemantics"],
     SOURCES / "BetaAccessContracts.swift": ["BetaAccessState", "BetaAccessDescriptor", "inviteRequired", "cityUnavailable"],
     TESTS / "BetaAccessContractsTests.swift": ["testBetaAccessStatesAndPath"],
+    GENERATED_PATHS: ["public static let getAccountBootstrap", "public static func getEcho", "public static func listPlaceEchoes", "public static func listPublicProfileEchoes"],
 }
+
+HANDWRITTEN_API_PATH_PATTERN = re.compile(
+    r'"/(?:account|admin|analytics|appeals|auth|beta|blocks|consent|creation-tokens|devices|discovery|echoes|health|hides|me|media|metrics|mutes|notification-preferences|notifications|places|privacy|ready|replies|reports|search|sessions|subscriptions|users)(?:[/?"\\])'
+)
 
 
 def main() -> int:
@@ -66,6 +73,13 @@ def main() -> int:
         match = FORBIDDEN_IMPORT_PATTERN.search(text)
         if match:
             print(f"forbidden framework import in Linux-verifiable iOS contract layer: {swift_file}: {match.group(0).strip()}", file=sys.stderr)
+            return 1
+
+    runtime_sources = [path for path in SOURCES.rglob("*.swift") if path != GENERATED_PATHS] + list(APP.rglob("*.swift"))
+    for swift_file in runtime_sources:
+        match = HANDWRITTEN_API_PATH_PATTERN.search(swift_file.read_text(encoding="utf-8"))
+        if match:
+            print(f"handwritten API path must use generated OpenAPIPaths: {swift_file}: {match.group(0)}", file=sys.stderr)
             return 1
 
     prototype_root = ROOT.parents[1] / "ios"

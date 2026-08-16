@@ -1,0 +1,73 @@
+name: echotrails-integration
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: echotrails_integration
+      POSTGRES_USER: echotrails
+      POSTGRES_PASSWORD: integration-only
+    ports: ["127.0.0.1:55432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U echotrails -d echotrails_integration"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  migrations:
+    image: migrate/migrate:v4.18.3
+    depends_on:
+      postgres: {condition: service_healthy}
+    volumes: [../../apps/api/db/migrations:/migrations:ro]
+    command: [-path, /migrations, -database, "postgres://echotrails:integration-only@postgres:5432/echotrails_integration?sslmode=disable", up]
+    restart: on-failure:5
+
+  redis:
+    image: redis:7.2-alpine
+    ports: ["127.0.0.1:56379:6379"]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  object-storage:
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: [server, /data]
+    environment:
+      MINIO_ROOT_USER: integration
+      MINIO_ROOT_PASSWORD: integration-secret
+    ports: ["127.0.0.1:59000:9000"]
+    healthcheck:
+      test: [CMD, mc, ready, local]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  object-storage-init:
+    image: quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z
+    depends_on:
+      object-storage: {condition: service_healthy}
+    entrypoint: [/bin/sh, -c]
+    command: ["mc alias set test http://object-storage:9000 integration integration-secret && mc mb --ignore-existing test/echotrails-integration && mc anonymous set none test/echotrails-integration"]
+
+  smtp:
+    image: axllent/mailpit:v1.27
+    ports: ["127.0.0.1:51025:1025", "127.0.0.1:58025:8025"]
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  moderation-mock:
+    image: python:3.13-alpine
+    working_dir: /mock
+    volumes: [./moderation_mock.py:/mock/moderation_mock.py:ro]
+    command: [python, /mock/moderation_mock.py]
+    ports: ["127.0.0.1:58081:8081"]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8081/health]
+      interval: 2s
+      timeout: 2s
+      retries: 30

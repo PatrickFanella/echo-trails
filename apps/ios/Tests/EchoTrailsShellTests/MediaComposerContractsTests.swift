@@ -25,8 +25,8 @@ final class MediaComposerContractsTests: XCTestCase {
         let intent = UploadIntent(echoID: "echo-local", attachment: attachment)
         let status = UploadStatusDescriptor(uploadID: "upl_123", objectKey: "media/original/ast_123/mp3", activityStatus: "processing")
 
-        XCTAssertEqual(intent.uploadAPIPath, "/media/uploads")
-        XCTAssertTrue(OpenAPIPaths.all.contains("/media/uploads"))
+        XCTAssertEqual(intent.uploadAPIPath, "/echoes/echo-local/media/uploads")
+        XCTAssertTrue(OpenAPIPaths.all.contains("/echoes/{echoId}/media/uploads"))
         XCTAssertTrue(status.usesOpaqueIdentifiers)
     }
 }

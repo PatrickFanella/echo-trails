@@ -11,6 +11,9 @@ dist/
 build/
 .vite/
 coverage/
+.artifacts/
+__pycache__/
+*.py[cod]
 
 # Swift/Xcode local output
 .build/
@@ -21,3 +24,4 @@ DerivedData/
 .DS_Store
 *.swp
 *.tmp
+ios/EchoTrails.xcodeproj/project.xcworkspace/

@@ -5,6 +5,6 @@
   "scripts": {
     "generate": "python3 scripts/generate-contracts.py",
     "lint": "python3 scripts/lint-openapi.py openapi.yaml",
-    "check": "npm run lint && npm run generate && git diff --exit-code -- ../../packages/shared-contracts/src/openapi-paths.ts ../../apps/ios/Sources/EchoTrailsShell/Generated/OpenAPIPaths.swift"
+    "check": "npm run lint && python3 scripts/generate-contracts.py --check"
   }
 }

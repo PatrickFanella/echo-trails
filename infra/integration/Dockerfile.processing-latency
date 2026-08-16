@@ -1,0 +1,11 @@
+FROM golang:1.23-bookworm
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ffmpeg imagemagick ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+COPY apps/worker/go.mod apps/worker/go.sum ./apps/worker/
+RUN cd apps/worker && go mod download
+COPY apps/worker/ ./apps/worker/
+WORKDIR /src/apps/worker
+ENV ECHOTRAILS_PROCESSING_LATENCY_TEST=1
+CMD ["go", "test", "./internal/media", "-run", "ReleaseProcessingLatency", "-count=1", "-v", "-timeout", "10m"]

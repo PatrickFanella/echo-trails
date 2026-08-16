@@ -3,44 +3,151 @@
   "info": {
     "title": "EchoTrails API",
     "version": "0.1.0",
-    "description": "Baseline contract for EchoTrails public API surfaces. Some Phase 4/5 paths are forward contract fixtures and are not wired in the runnable API until their implementation pass. Product detail remains in docs/PRD.md and docs/technical-plan.md."
+    "description": "Runtime contract for the invite-gated EchoTrails TestFlight API. Product detail remains in docs/PRD.md and docs/technical-plan.md."
   },
   "x-echotrails-runtime-status": {
-    "wiredInApiBinary": ["health", "auth", "places", "media"],
-    "contractOnlyUntilLaterPass": ["social", "safety", "notifications", "privacy", "analytics", "beta"]
+    "wiredInApiBinary": [
+      "health",
+      "auth",
+      "places",
+      "echoes",
+      "media",
+      "social",
+      "safety",
+      "notifications",
+      "privacy",
+      "analytics",
+      "beta",
+      "discovery",
+      "admin"
+    ],
+    "contractOnlyUntilLaterPass": []
   },
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
   "servers": [
     {
       "url": "https://api.echotrails.example",
-      "description": "Placeholder production API origin"
+      "description": "Production API origin; replace the reserved example host during release configuration"
     }
   ],
   "tags": [
-    {"name": "health"},
-    {"name": "auth"},
-    {"name": "places"},
-    {"name": "echoes"},
-    {"name": "media"},
-    {"name": "social"},
-    {"name": "safety"},
-    {"name": "notifications"},
-    {"name": "privacy"},
-    {"name": "analytics"},
-    {"name": "beta"}
+    {
+      "name": "health"
+    },
+    {
+      "name": "auth"
+    },
+    {
+      "name": "places"
+    },
+    {
+      "name": "echoes"
+    },
+    {
+      "name": "media"
+    },
+    {
+      "name": "social"
+    },
+    {
+      "name": "safety"
+    },
+    {
+      "name": "notifications"
+    },
+    {
+      "name": "privacy"
+    },
+    {
+      "name": "analytics"
+    },
+    {
+      "name": "beta"
+    },
+    {
+      "name": "admin"
+    }
   ],
   "paths": {
+    "/me": {
+      "get": {"tags": ["auth"], "operationId": "getMe", "summary": "Get the authenticated private profile", "responses": {"200": {"description": "Private profile", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MeProfile"}}}}, "401": {"$ref": "#/components/responses/ErrorResponse"}}},
+      "patch": {"tags": ["auth"], "operationId": "updateMe", "summary": "Create or update the authenticated profile", "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/UpsertProfileRequest"}}}}, "responses": {"200": {"description": "Updated private profile", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MeProfile"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/me/avatar/uploads": {
+      "post": {
+        "tags": ["auth", "media"],
+        "operationId": "createAvatarUpload",
+        "summary": "Create a private moderated profile-image upload",
+        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateAvatarUploadRequest"}}}},
+        "responses": {
+          "201": {"description": "Avatar upload target created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "400": {"$ref": "#/components/responses/ErrorResponse"},
+          "401": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
+    "/me/avatar": {
+      "put": {
+        "tags": ["auth", "media"],
+        "operationId": "selectAvatar",
+        "summary": "Select an owned approved image derivative as the profile avatar",
+        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SelectAvatarRequest"}}}},
+        "responses": {
+          "200": {"description": "Updated private profile", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MeProfile"}}}},
+          "409": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      },
+      "delete": {
+        "tags": ["auth", "media"],
+        "operationId": "clearAvatar",
+        "summary": "Remove the authenticated user's selected avatar",
+        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
+        "responses": {"200": {"description": "Updated private profile", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MeProfile"}}}}}
+      }
+    },
+    "/users/{handle}": {
+      "get": {"tags": ["auth"], "operationId": "getPublicProfile", "security": [], "summary": "Get a public profile by handle", "parameters": [{"name": "handle", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Public profile", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PublicProfile"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
+    },
+    "/users/{handle}/echoes": {
+      "get": {
+        "tags": ["auth", "echoes"],
+        "operationId": "listPublicProfileEchoes",
+        "security": [],
+        "summary": "List safely published Echoes by public profile handle, applying viewer filters when authenticated",
+        "parameters": [
+          {"name": "handle", "in": "path", "required": true, "schema": {"type": "string"}},
+          {"$ref": "#/components/parameters/Limit"},
+          {"$ref": "#/components/parameters/Cursor"}
+        ],
+        "responses": {
+          "200": {"description": "Published Echoes for the profile", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PublicProfileEchoesResponse"}}}},
+          "404": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
     "/health": {
       "get": {
-        "tags": ["health"],
+        "tags": [
+          "health"
+        ],
         "operationId": "getHealth",
+        "security": [],
         "summary": "Health check",
         "responses": {
           "200": {
             "description": "Service is healthy",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/HealthResponse"}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
               }
             }
           }
@@ -49,78 +156,753 @@
     },
     "/ready": {
       "get": {
-        "tags": ["health"],
+        "tags": [
+          "health"
+        ],
         "operationId": "getReadiness",
+        "security": [],
         "summary": "Readiness check",
         "responses": {
           "200": {
             "description": "Service is ready",
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/HealthResponse"}}}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
           }
         }
       }
     },
     "/metrics": {
       "get": {
-        "tags": ["health"],
+        "tags": [
+          "health"
+        ],
         "operationId": "getMetrics",
+        "security": [],
         "summary": "Prometheus metrics",
-        "responses": {"200": {"description": "Prometheus text metrics"}}
+        "responses": {
+          "200": {
+            "description": "Prometheus text metrics"
+          }
+        }
       }
     },
     "/auth/apple": {
       "post": {
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "operationId": "signInWithApple",
+        "security": [],
         "summary": "Exchange a Sign in with Apple identity token for an EchoTrails session",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/AppleAuthRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/AppleAuthRequest"
+              }
             }
           }
         },
         "responses": {
-          "200": {"$ref": "#/components/responses/AuthTokenResponse"},
-          "401": {"$ref": "#/components/responses/ErrorResponse"}
+          "200": {
+            "$ref": "#/components/responses/AuthTokenResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/consent/current": {
-      "get": {"tags": ["privacy"], "operationId": "getCurrentConsent", "summary": "Get current beta terms/privacy/disclosure versions", "responses": {"200": {"description": "Current consent versions", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConsentVersion"}}}}}}
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "getCurrentConsent",
+        "security": [],
+        "summary": "Get current beta terms/privacy/disclosure versions",
+        "responses": {
+          "200": {
+            "description": "Current consent versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsentVersion"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "/consent/acceptances": {
-      "post": {"tags": ["privacy"], "operationId": "acceptConsent", "summary": "Record a user's accepted consent versions", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ConsentAcceptanceRequest"}}}}, "responses": {"202": {"description": "Consent accepted"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "post": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "acceptConsent",
+        "summary": "Record a user's accepted consent versions",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentAcceptanceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Consent accepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
     },
     "/privacy/exports": {
-      "post": {"tags": ["privacy"], "operationId": "requestPrivacyExport", "summary": "Queue async privacy export", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyExportRequest"}}}}, "responses": {"202": {"description": "Export queued", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyJobStatus"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "post": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "requestPrivacyExport",
+        "summary": "Queue async privacy export",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivacyExportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Export queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyJobStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
     },
     "/privacy/exports/{jobId}": {
-      "get": {"tags": ["privacy"], "operationId": "getPrivacyExport", "summary": "Get privacy export job status", "parameters": [{"$ref": "#/components/parameters/JobId"}], "responses": {"200": {"description": "Export status", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyJobStatus"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "getPrivacyExport",
+        "summary": "Get privacy export job status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Export status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyJobStatus"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/privacy/exports/{jobId}/download": {
+      "get": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "downloadPrivacyExport",
+        "summary": "Redirect to a short-lived private export download",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/JobId"
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Short-lived presigned object redirect"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
     },
     "/privacy/deletions": {
-      "post": {"tags": ["privacy"], "operationId": "requestAccountDeletion", "summary": "Queue async account deletion", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AccountDeletionRequest"}}}}, "responses": {"202": {"description": "Deletion queued", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PrivacyJobStatus"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "post": {
+        "tags": [
+          "privacy"
+        ],
+        "operationId": "requestAccountDeletion",
+        "summary": "Queue async account deletion",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeletionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Deletion queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PrivacyJobStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
     },
     "/analytics/opt-out": {
-      "post": {"tags": ["analytics"], "operationId": "setAnalyticsOptOut", "summary": "Set first-party analytics opt-out", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnalyticsOptOutRequest"}}}}, "responses": {"202": {"description": "Opt-out state accepted"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "get": {
+        "tags": ["analytics"],
+        "operationId": "getAnalyticsOptOut",
+        "summary": "Read the authenticated user's analytics opt-out state",
+        "responses": {
+          "200": {"description": "Analytics preference", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnalyticsOptOutRequest"}}}},
+          "401": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      },
+      "post": {
+        "tags": [
+          "analytics"
+        ],
+        "operationId": "setAnalyticsOptOut",
+        "summary": "Set first-party analytics opt-out",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsOptOutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Opt-out state accepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
     },
     "/analytics/events": {
-      "post": {"tags": ["analytics"], "operationId": "recordAnalyticsEvent", "summary": "Record privacy-safe first-party analytics event", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AnalyticsEventEnvelope"}}}}, "responses": {"202": {"description": "Event accepted"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "post": {
+        "tags": [
+          "analytics"
+        ],
+        "operationId": "recordAnalyticsEvent",
+        "summary": "Record privacy-safe first-party analytics event",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsEventEnvelope"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Event accepted"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
     },
     "/beta/access": {
-      "post": {"tags": ["beta"], "operationId": "evaluateBetaAccess", "summary": "Evaluate invite code and city beta gate", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/InviteCodeRequest"}}}}, "responses": {"200": {"description": "Beta access state", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/BetaAccessResponse"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
+      "post": {
+        "tags": [
+          "beta"
+        ],
+        "operationId": "evaluateBetaAccess",
+        "summary": "Evaluate invite code and city beta gate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteCodeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Beta access state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BetaAccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/account/sessions": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "listAccountSessions",
+        "summary": "List the authenticated user's active device sessions",
+        "parameters": [
+          {"$ref": "#/components/parameters/Limit"},
+          {"$ref": "#/components/parameters/Cursor"}
+        ],
+        "responses": {
+          "200": {
+            "description": "Active sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountSessionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/account/bootstrap": {
+      "get": {
+        "tags": ["auth"],
+        "operationId": "getAccountBootstrap",
+        "summary": "Read server-authoritative invite, consent, and profile setup state",
+        "responses": {
+          "200": {
+            "description": "Current account access state",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/AccountAccessState"}
+              }
+            }
+          },
+          "401": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      }
+    },
+    "/account/sessions/{targetId}": {
+      "delete": {
+        "tags": [
+          "auth"
+        ],
+        "operationId": "revokeAccountSession",
+        "summary": "Revoke one of the authenticated user's device sessions",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Session revoked"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/admin/session": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "createAdminSession",
+        "summary": "Exchange an active moderator bearer session for a secure browser session",
+        "responses": {
+          "201": {
+            "description": "Admin session opened",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSessionResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "deleteAdminSession",
+        "security": [{"adminCookie": []}],
+        "summary": "Revoke the current admin browser session",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRFToken"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Admin session revoked"
+          }
+        }
+      }
+    },
+    "/admin/{queue}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "listAdminQueue",
+        "security": [{"adminCookie": []}],
+        "summary": "List reports, media, Places, jobs, appeals, or audit history",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AdminQueue"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {"type": "string", "enum": ["recent", "notable", "oldest"], "default": "notable"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cursor-paginated admin queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminQueuePage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/moderation-actions": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "applyModerationAction",
+        "security": [{"adminCookie": []}],
+        "summary": "Apply an audited moderation action",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRFToken"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Action applied and audited"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/admin/media/{targetId}": {
+      "patch": {
+        "tags": ["admin"],
+        "operationId": "reviewAdminSafetyItem",
+        "security": [{"adminCookie": []}],
+        "summary": "Approve or reject an uncertain media or text safety review",
+        "parameters": [
+          { "$ref": "#/components/parameters/TargetId" },
+          { "$ref": "#/components/parameters/CSRFToken" },
+          { "$ref": "#/components/parameters/IdempotencyKey" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminMutationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Review decision applied, reconciled, and audited" },
+          "400": { "$ref": "#/components/responses/ErrorResponse" },
+          "404": { "$ref": "#/components/responses/ErrorResponse" }
+        }
+      }
+    },
+    "/admin/media/{targetId}/preview": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "getAdminMediaPreview",
+        "security": [{"adminCookie": []}],
+        "summary": "Redirect an authorized moderator to a short-lived private original preview",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TargetId"
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Short-lived signed private object redirect"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/admin/places/{targetId}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "reviewAdminPlace",
+        "security": [{"adminCookie": []}],
+        "summary": "Approve, restrict, merge, or update a Place boundary/radius",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/CSRFToken"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Place updated and audited"
+          }
+        }
+      }
+    },
+    "/admin/appeals/{targetId}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "resolveAdminAppeal",
+        "security": [{"adminCookie": []}],
+        "summary": "Accept or reject an appeal",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/CSRFToken"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Appeal resolved and audited"
+          }
+        }
+      }
+    },
+    "/admin/jobs/{targetId}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "manageAdminJob",
+        "security": [{"adminCookie": []}],
+        "summary": "Retry or cancel a delivery job",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/CSRFToken"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminMutationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Job updated and audited"
+          }
+        }
+      }
+    },
+    "/admin/invites": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "createAdminInvite",
+        "security": [{"adminCookie": []}],
+        "summary": "Create an audited beta invite",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CSRFToken"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInviteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invite created and audited"
+          }
+        }
+      }
     },
     "/auth/email/start": {
       "post": {
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "operationId": "startEmailAuth",
+        "security": [],
         "summary": "Start passwordless email authentication",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/EmailAuthStartRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/EmailAuthStartRequest"
+              }
             }
           }
         },
@@ -129,86 +911,272 @@
             "description": "Email code queued",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/EmailAuthStartResponse"}
+                "schema": {
+                  "$ref": "#/components/schemas/EmailAuthStartResponse"
+                }
               }
             }
           },
-          "400": {"$ref": "#/components/responses/ErrorResponse"}
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/auth/email/verify": {
       "post": {
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "operationId": "verifyEmailAuth",
+        "security": [],
         "summary": "Verify a passwordless email code",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/EmailAuthVerifyRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/EmailAuthVerifyRequest"
+              }
             }
           }
         },
         "responses": {
-          "200": {"$ref": "#/components/responses/AuthTokenResponse"},
-          "401": {"$ref": "#/components/responses/ErrorResponse"}
+          "200": {
+            "$ref": "#/components/responses/AuthTokenResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/sessions/refresh": {
       "post": {
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "operationId": "refreshSession",
+        "security": [],
         "summary": "Rotate a refresh token and return a new access token",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/RefreshSessionRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/RefreshSessionRequest"
+              }
             }
           }
         },
         "responses": {
-          "200": {"$ref": "#/components/responses/AuthTokenResponse"},
-          "401": {"$ref": "#/components/responses/ErrorResponse"}
-        }
+          "200": {
+            "$ref": "#/components/responses/AuthTokenResponse"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
       }
     },
     "/sessions/logout": {
       "post": {
-        "tags": ["auth"],
+        "tags": [
+          "auth"
+        ],
         "operationId": "logoutSession",
+        "security": [],
         "summary": "Revoke the active refresh token",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/RefreshSessionRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/RefreshSessionRequest"
+              }
             }
           }
         },
         "responses": {
-          "204": {"description": "Session revoked"},
-          "401": {"$ref": "#/components/responses/ErrorResponse"}
-        }
+          "204": {
+            "description": "Session revoked"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
       }
     },
     "/places/search": {
       "get": {
-        "tags": ["places"],
+        "tags": [
+          "places"
+        ],
         "operationId": "searchPlaces",
+        "security": [],
         "summary": "Search active Places by name, alias, or provider mapping",
         "parameters": [
-          {"$ref": "#/components/parameters/SearchQuery"},
-          {"$ref": "#/components/parameters/IncludeRestricted"}
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeRestricted"
+          }
         ],
         "responses": {
           "200": {
             "description": "Place search results",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/PlaceSearchResponse"}
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceSearchResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "get": {
+        "tags": [
+          "places",
+          "echoes"
+        ],
+        "operationId": "searchDiscovery",
+        "security": [],
+        "summary": "Weighted Place and Echo search with city, Place, or nearby scope",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SearchQuery"
+          },
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "city",
+                "place",
+                "nearby"
+              ],
+              "default": "city"
+            }
+          },
+          {
+            "name": "place_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RadiusMeters"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Weighted search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/discovery/notable": {
+      "get": {
+        "tags": [
+          "echoes"
+        ],
+        "operationId": "getNotableEchoes",
+        "security": [],
+        "summary": "Get versioned notability-ranked Echoes",
+        "parameters": [
+          {
+            "name": "place_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lat",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "lon",
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/RadiusMeters"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked Echoes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "echoes"
+                  ],
+                  "properties": {
+                    "echoes": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/EchoDiscoveryResult"
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -217,73 +1185,130 @@
     },
     "/places/{placeId}": {
       "get": {
-        "tags": ["places"],
+        "tags": [
+          "places"
+        ],
         "operationId": "getPlace",
+        "security": [],
         "summary": "Get a Place by ID",
-        "parameters": [{"$ref": "#/components/parameters/PlaceId"}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlaceId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Place detail",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/Place"}
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
               }
             }
           },
-          "301": {"description": "Merged Place redirect"},
-          "404": {"$ref": "#/components/responses/ErrorResponse"},
-          "410": {"$ref": "#/components/responses/ErrorResponse"}
+          "301": {
+            "description": "Merged Place redirect"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "410": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/places/{placeId}/echoes": {
       "get": {
-        "tags": ["places", "echoes"],
+        "tags": [
+          "places",
+          "echoes"
+        ],
         "operationId": "listPlaceEchoes",
+        "security": [],
         "summary": "List published Echoes for an active Place",
         "parameters": [
-          {"$ref": "#/components/parameters/PlaceId"},
-          {"$ref": "#/components/parameters/Limit"}
+          {
+            "$ref": "#/components/parameters/PlaceId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
         ],
         "responses": {
           "200": {
             "description": "Published Echoes for the Place",
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlaceEchoesResponse"}}}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceEchoesResponse"
+                }
+              }
+            }
           },
-          "404": {"$ref": "#/components/responses/ErrorResponse"}
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/discovery/nearby": {
       "get": {
-        "tags": ["places"],
+        "tags": [
+          "places"
+        ],
         "operationId": "nearbyPlaces",
+        "security": [],
         "summary": "Find nearby active Places",
         "parameters": [
-          {"$ref": "#/components/parameters/Latitude"},
-          {"$ref": "#/components/parameters/Longitude"},
-          {"$ref": "#/components/parameters/RadiusMeters"},
-          {"$ref": "#/components/parameters/IncludeRestricted"}
+          {
+            "$ref": "#/components/parameters/Latitude"
+          },
+          {
+            "$ref": "#/components/parameters/Longitude"
+          },
+          {
+            "$ref": "#/components/parameters/RadiusMeters"
+          },
+          {
+            "$ref": "#/components/parameters/IncludeRestricted"
+          }
         ],
         "responses": {
           "200": {
             "description": "Nearby Places",
-            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PlaceSearchResponse"}}}
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceSearchResponse"
+                }
+              }
+            }
           },
-          "400": {"$ref": "#/components/responses/ErrorResponse"}
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/places/requests": {
       "post": {
-        "tags": ["places"],
+        "tags": [
+          "places"
+        ],
         "operationId": "requestPlace",
         "summary": "Request a new Place for review",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/PlaceRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/PlaceRequest"
+              }
             }
           }
         },
@@ -292,25 +1317,88 @@
             "description": "Place request created",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/Place"}
+                "schema": {
+                  "$ref": "#/components/schemas/Place"
+                }
               }
             }
           },
-          "400": {"$ref": "#/components/responses/ErrorResponse"}
-        }
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
       }
     },
-    "/echoes": {
+    "/creation-tokens": {
       "post": {
-        "tags": ["echoes"],
-        "operationId": "createTextEchoDraft",
-        "summary": "Create a text Echo draft",
-        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
+        "tags": [
+          "echoes",
+          "places"
+        ],
+        "operationId": "createCreationToken",
+        "summary": "Validate a private location proof and issue a Place-bound creation token",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/CreateTextEchoRequest"}
+              "schema": {
+                "$ref": "#/components/schemas/CreationTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Creation token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreationTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/echoes": {
+      "post": {
+        "tags": [
+          "echoes"
+        ],
+        "operationId": "createEchoDraft",
+        "summary": "Create a Place-authorized Echo draft",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEchoRequest"
+              }
             }
           }
         },
@@ -319,339 +1407,3211 @@
             "description": "Echo draft created",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/Echo"}
+                "schema": {
+                  "$ref": "#/components/schemas/Echo"
+                }
               }
             }
           },
-          "400": {"$ref": "#/components/responses/ErrorResponse"},
-          "409": {"$ref": "#/components/responses/ErrorResponse"}
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/echoes/{echoId}": {
       "get": {
-        "tags": ["echoes"],
+        "tags": [
+          "echoes"
+        ],
         "operationId": "getEcho",
+        "security": [],
         "summary": "Read a published Echo or an author-owned draft",
-        "parameters": [{"$ref": "#/components/parameters/EchoId"}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Echo detail",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/Echo"}
+                "schema": {
+                  "$ref": "#/components/schemas/Echo"
+                }
               }
             }
           },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "patch": {
+        "tags": ["echoes"],
+        "operationId": "updateEchoDraft",
+        "summary": "Update author-owned draft content without changing its Place or content mode",
+        "parameters": [
+          {"$ref": "#/components/parameters/EchoId"},
+          {"$ref": "#/components/parameters/IdempotencyKey"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/EchoPatchRequest"}}}
+        },
+        "responses": {
+          "200": {"description": "Updated Echo draft", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Echo"}}}},
+          "400": {"$ref": "#/components/responses/ErrorResponse"},
+          "403": {"$ref": "#/components/responses/ErrorResponse"},
+          "404": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      },
+      "delete": {
+        "tags": ["echoes"],
+        "operationId": "deleteEcho",
+        "summary": "Soft-delete an author-owned Echo",
+        "parameters": [
+          {"$ref": "#/components/parameters/EchoId"},
+          {"$ref": "#/components/parameters/IdempotencyKey"}
+        ],
+        "responses": {
+          "204": {"description": "Echo deleted"},
           "403": {"$ref": "#/components/responses/ErrorResponse"},
           "404": {"$ref": "#/components/responses/ErrorResponse"}
         }
       }
     },
-    "/echoes/{echoId}/publish": {
+    "/echoes/{echoId}/submit": {
       "post": {
-        "tags": ["echoes"],
-        "operationId": "publishEcho",
-        "summary": "Publish an author-owned text Echo draft",
-        "parameters": [{"$ref": "#/components/parameters/EchoId"}],
+        "tags": [
+          "echoes"
+        ],
+        "operationId": "submitEcho",
+        "summary": "Submit an author-owned Echo for publication or media upload",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
         "responses": {
           "200": {
             "description": "Echo published",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/Echo"}
+                "schema": {
+                  "$ref": "#/components/schemas/Echo"
+                }
               }
             }
           },
-          "403": {"$ref": "#/components/responses/ErrorResponse"},
-          "404": {"$ref": "#/components/responses/ErrorResponse"}
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
-    "/echoes/{echoId}/reactions": {
-      "put": {"tags": ["social"], "operationId": "putEchoReaction", "summary": "Set one reaction per user for an Echo", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReactionRequest"}}}}, "responses": {"200": {"description": "Reaction totals", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReactionSummary"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}, "403": {"$ref": "#/components/responses/ErrorResponse"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}},
-      "get": {"tags": ["social"], "operationId": "getEchoReactions", "summary": "Get Echo reaction totals", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "responses": {"200": {"description": "Reaction totals", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReactionSummary"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/echoes/{echoId}/replies": {
-      "post": {"tags": ["social"], "operationId": "createEchoReply", "summary": "Create a text reply with one-level nesting", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReplyRequest"}}}}, "responses": {"201": {"description": "Reply created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Reply"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}, "403": {"$ref": "#/components/responses/ErrorResponse"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}},
-      "get": {"tags": ["social"], "operationId": "listEchoReplies", "summary": "List oldest-first visible replies", "parameters": [{"$ref": "#/components/parameters/EchoId"}, {"name": "viewer_id", "in": "query", "required": false, "schema": {"type": "string"}}], "responses": {"200": {"description": "Visible replies", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RepliesResponse"}}}}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/echoes/{echoId}/stitches": {
-      "post": {"tags": ["social"], "operationId": "createEchoStitch", "summary": "Create an Echo linked to a source Echo", "parameters": [{"$ref": "#/components/parameters/EchoId"}], "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StitchRequest"}}}}, "responses": {"201": {"description": "Stitch created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Stitch"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}, "403": {"$ref": "#/components/responses/ErrorResponse"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/reports": {
-      "post": {"tags": ["safety"], "operationId": "createReport", "summary": "Create moderation intake report", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ReportRequest"}}}}, "responses": {"201": {"description": "Report created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Report"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/hides": {
-      "post": {"tags": ["safety"], "operationId": "hideTarget", "summary": "Hide a target for a viewer", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisibilityRequest"}}}}, "responses": {"204": {"description": "Target hidden"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/blocks": {
-      "post": {"tags": ["safety"], "operationId": "blockUser", "summary": "Block a user and suppress their notifications", "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/VisibilityRequest"}}}}, "responses": {"204": {"description": "User blocked"}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/notifications": {
-      "get": {"tags": ["notifications"], "operationId": "listNotifications", "summary": "List stored activity-safe notification records", "parameters": [{"name": "user_id", "in": "query", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Notification records", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/NotificationsResponse"}}}}, "400": {"$ref": "#/components/responses/ErrorResponse"}}}
-    },
-    "/media/uploads": {
+    "/echoes/{echoId}/views": {
       "post": {
-        "tags": ["media"],
-        "operationId": "createMediaUpload",
-        "summary": "Create a presigned direct media upload",
-        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
+        "tags": ["social"],
+        "operationId": "recordEchoDetailView",
+        "summary": "Record one trust-weighted unique detail view for ranking",
+        "parameters": [{"$ref": "#/components/parameters/EchoId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
+        "responses": {"204": {"description": "Unique view recorded"}, "404": {"$ref": "#/components/responses/ErrorResponse"}}
+      }
+    },
+    "/echoes/{echoId}/reactions": {
+      "put": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "putEchoReaction",
+        "summary": "Set one reaction per user for an Echo",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateMediaUploadRequest"}}}
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReactionRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "201": {"description": "Upload target created", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
-          "400": {"$ref": "#/components/responses/ErrorResponse"}
+          "200": {
+            "description": "Reaction totals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactionSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "getEchoReactions",
+        "security": [],
+        "summary": "Get Echo reaction totals",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reaction totals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReactionSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/echoes/{echoId}/replies": {
+      "post": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "createEchoReply",
+        "summary": "Create a text reply with one-level nesting",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reply created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reply"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "listEchoReplies",
+        "security": [],
+        "summary": "List oldest-first replies visible to the authenticated viewer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visible replies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepliesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/echoes/{echoId}/stitches": {
+      "post": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "createEchoStitch",
+        "summary": "Create a location-authorized Echo linked to a source Echo and optional immutable Reply snapshot",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StitchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Stitch draft created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Stitch"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/replies/{replyId}": {
+      "patch": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "updateReply",
+        "summary": "Edit a Reply while retaining revision history",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReplyId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplyEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reply updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reply"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "deleteReply",
+        "summary": "Delete a Reply while retaining a thread continuity placeholder",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReplyId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Reply replaced with continuity placeholder"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/replies/{replyId}/history": {
+      "get": {
+        "tags": [
+          "social"
+        ],
+        "operationId": "getReplyHistory",
+        "summary": "Get the authenticated author's Reply revision history",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ReplyId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reply revisions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReplyHistoryResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/reports": {
+      "post": {
+        "tags": [
+          "safety"
+        ],
+        "operationId": "createReport",
+        "summary": "Create moderation intake report",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/appeals": {
+      "post": {
+        "tags": [
+          "safety"
+        ],
+        "operationId": "createAppeal",
+        "summary": "Appeal a moderation action targeting the authenticated user",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AppealRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Appeal created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appeal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "safety"
+        ],
+        "operationId": "listAppeals",
+        "summary": "List the authenticated user's appeals",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Appeal history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppealPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appeals/{targetId}": {
+      "patch": {
+        "tags": [
+          "safety"
+        ],
+        "operationId": "updateAppeal",
+        "summary": "Edit an unresolved appeal while retaining revision history",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "body"
+                ],
+                "properties": {
+                  "body": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Appeal updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Appeal"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/hides": {
+      "post": {
+        "tags": [
+          "safety"
+        ],
+        "operationId": "hideTarget",
+        "summary": "Hide a target for a viewer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisibilityRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Target hidden"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/blocks": {
+      "post": {
+        "tags": [
+          "safety"
+        ],
+        "operationId": "blockUser",
+        "summary": "Block a user and suppress their notifications",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "User blocked"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "listNotifications",
+        "summary": "List the authenticated user's stored activity-safe notification records",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notification records",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "markNotificationsRead",
+        "summary": "Mark selected or all Activity records read",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkNotificationsReadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Activity state updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/places/{placeId}/subscription": {
+      "put": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "putPlaceSubscription",
+        "summary": "Privately subscribe to a Place",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceSubscription"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "deletePlaceSubscription",
+        "summary": "Unsubscribe from a Place",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PlaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Subscription removed"
+          }
+        }
+      }
+    },
+    "/subscriptions": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "listPlaceSubscriptions",
+        "summary": "List private Place subscriptions",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private subscriptions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "subscriptions"
+                  ],
+                  "properties": {
+                    "subscriptions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlaceSubscription"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/devices": {
+      "post": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "registerDevice",
+        "summary": "Register an encrypted APNs token",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceRegistrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Device registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceRegistration"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/devices/{deviceId}": {
+      "delete": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "deleteDevice",
+        "summary": "Disable an APNs device",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DeviceId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Device disabled"
+          }
+        }
+      }
+    },
+    "/notification-preferences": {
+      "get": {
+        "tags": ["notifications"],
+        "operationId": "getNotificationPreferences",
+        "summary": "Read global notification preferences without mutation",
+        "responses": {
+          "200": {
+            "description": "Current notification preferences or defaults",
+            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/NotificationPreferences"}}}
+          },
+          "401": {"$ref": "#/components/responses/ErrorResponse"}
+        }
+      },
+      "patch": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "patchNotificationPreferences",
+        "summary": "Update global notification preferences",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationPreferencesPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Preferences updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferences"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/mutes/{targetType}/{targetId}": {
+      "put": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "putNotificationMute",
+        "summary": "Mute a Place or Echo thread",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MuteTargetType"
+          },
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Mute saved"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "notifications"
+        ],
+        "operationId": "deleteNotificationMute",
+        "summary": "Remove a Place or Echo thread mute",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/MuteTargetType"
+          },
+          {
+            "$ref": "#/components/parameters/TargetId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Mute removed"
+          }
+        }
+      }
+    },
+    "/media/assets/{assetId}": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "operationId": "getPublicMediaAsset",
+        "security": [],
+        "summary": "Resolve a stable approved derivative URL",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AssetId"
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Temporary redirect to approved object"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/echoes/{echoId}/media/uploads": {
+      "post": {
+        "tags": [
+          "media"
+        ],
+        "operationId": "createMediaUpload",
+        "summary": "Create a presigned direct media upload",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EchoId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMediaUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Upload target created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     },
     "/media/uploads/{uploadId}": {
       "get": {
-        "tags": ["media"],
+        "tags": [
+          "media"
+        ],
         "operationId": "getMediaUpload",
         "summary": "Get activity-safe media upload lifecycle status",
-        "parameters": [{"$ref": "#/components/parameters/UploadId"}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UploadId"
+          }
+        ],
         "responses": {
-          "200": {"description": "Upload and processing lifecycle status without private upload URLs after completion or expiry", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "200": {
+            "description": "Upload and processing lifecycle status without private upload URLs after completion or expiry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
+        }
+      }
+    },
+    "/media/uploads/{uploadId}/retry": {
+      "post": {
+        "tags": ["media"],
+        "operationId": "renewMediaUpload",
+        "summary": "Renew an expired or failed private upload authorization",
+        "parameters": [
+          {"$ref": "#/components/parameters/UploadId"},
+          {"$ref": "#/components/parameters/IdempotencyKey"}
+        ],
+        "responses": {
+          "200": {"description": "Fresh upload authorization", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
+          "400": {"$ref": "#/components/responses/ErrorResponse"},
           "404": {"$ref": "#/components/responses/ErrorResponse"}
         }
       }
     },
     "/media/uploads/{uploadId}/complete": {
       "post": {
-        "tags": ["media"],
+        "tags": [
+          "media"
+        ],
         "operationId": "completeMediaUpload",
         "summary": "Complete a presigned direct media upload",
-        "parameters": [{"$ref": "#/components/parameters/UploadId"}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/UploadId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
         "responses": {
-          "200": {"description": "Upload completed", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MediaUploadResponse"}}}},
-          "400": {"$ref": "#/components/responses/ErrorResponse"},
-          "404": {"$ref": "#/components/responses/ErrorResponse"}
+          "200": {
+            "description": "Upload completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaUploadResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse"
+          }
         }
       }
     }
   },
   "components": {
     "parameters": {
-      "EchoId": {"name": "echoId", "in": "path", "required": true, "schema": {"type": "string"}},
-      "IdempotencyKey": {"name": "Idempotency-Key", "in": "header", "required": false, "schema": {"type": "string", "minLength": 1, "maxLength": 255}},
-      "IncludeRestricted": {"name": "include_restricted", "in": "query", "required": false, "schema": {"type": "boolean", "default": false}},
-      "JobId": {"name": "jobId", "in": "path", "required": true, "schema": {"type": "string"}},
-      "Latitude": {"name": "lat", "in": "query", "required": true, "schema": {"type": "number", "minimum": -90, "maximum": 90}},
-      "Limit": {"name": "limit", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 1, "maximum": 50, "default": 20}},
-      "Longitude": {"name": "lon", "in": "query", "required": true, "schema": {"type": "number", "minimum": -180, "maximum": 180}},
-      "PlaceId": {"name": "placeId", "in": "path", "required": true, "schema": {"type": "string"}},
-      "RadiusMeters": {"name": "radius_meters", "in": "query", "required": false, "schema": {"type": "integer", "minimum": 10, "maximum": 10000, "default": 1000}},
-      "SearchQuery": {"name": "q", "in": "query", "required": false, "schema": {"type": "string"}},
-      "UploadId": {"name": "uploadId", "in": "path", "required": true, "schema": {"type": "string"}}
+      "AssetId": {
+        "name": "assetId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "AdminQueue": {
+        "name": "queue",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "reports",
+            "media",
+            "places",
+            "jobs",
+            "appeals",
+            "audit"
+          ]
+        }
+      },
+      "CSRFToken": {
+        "name": "X-CSRF-Token",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "DeviceId": {
+        "name": "deviceId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "EchoId": {
+        "name": "echoId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        }
+      },
+      "IncludeRestricted": {
+        "name": "include_restricted",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "JobId": {
+        "name": "jobId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Latitude": {
+        "name": "lat",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 20
+        }
+      },
+      "Longitude": {
+        "name": "lon",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "MuteTargetType": {
+        "name": "targetType",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "places",
+            "echoes"
+          ]
+        }
+      },
+      "PlaceId": {
+        "name": "placeId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ReplyId": {
+        "name": "replyId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "RadiusMeters": {
+        "name": "radius_meters",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 10000,
+          "default": 1000
+        }
+      },
+      "SearchQuery": {
+        "name": "q",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "TargetId": {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "UploadId": {
+        "name": "uploadId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "securitySchemes": {
+      "adminCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "echotrails_admin"
+      },
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque"
+      }
     },
     "responses": {
       "AuthTokenResponse": {
         "description": "Authenticated session tokens",
-        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/AuthTokenResponse"}}}
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AuthTokenResponse"
+            }
+          }
+        }
       },
       "ErrorResponse": {
         "description": "Structured error response",
-        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ErrorResponse"}}}
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
       }
     },
     "schemas": {
       "AppleAuthRequest": {
         "type": "object",
-        "required": ["identity_token"],
-        "properties": {"identity_token": {"type": "string", "minLength": 1}}
+        "required": [
+          "identity_token"
+        ],
+        "properties": {
+          "identity_token": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
       },
       "AuthTokenResponse": {
         "type": "object",
-        "required": ["user_id", "session_id", "access_token", "refresh_token", "access_token_expires_at", "refresh_token_expires_at"],
+        "required": [
+          "user_id",
+          "session_id",
+          "access_token",
+          "refresh_token",
+          "access_token_expires_at",
+          "refresh_token_expires_at"
+        ],
         "properties": {
-          "user_id": {"type": "string"},
-          "session_id": {"type": "string"},
-          "access_token": {"type": "string"},
-          "refresh_token": {"type": "string"},
-          "access_token_expires_at": {"type": "string", "format": "date-time"},
-          "refresh_token_expires_at": {"type": "string", "format": "date-time"}
+          "user_id": {
+            "type": "string"
+          },
+          "session_id": {
+            "type": "string"
+          },
+          "access_token": {
+            "type": "string"
+          },
+          "refresh_token": {
+            "type": "string"
+          },
+          "access_token_expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "refresh_token_expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "Coordinate": {
         "type": "object",
-        "required": ["lat", "lon"],
+        "required": [
+          "lat",
+          "lon"
+        ],
         "properties": {
-          "lat": {"type": "number", "minimum": -90, "maximum": 90},
-          "lon": {"type": "number", "minimum": -180, "maximum": 180}
+          "lat": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "lon": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
         }
       },
-      "CreateTextEchoRequest": {
+      "CreationTokenRequest": {
         "type": "object",
-        "required": ["place_id", "title", "body", "creation_token"],
+        "additionalProperties": false,
+        "required": [
+          "place_id",
+          "latitude",
+          "longitude",
+          "accuracy_meters",
+          "captured_at"
+        ],
         "properties": {
-          "place_id": {"type": "string"},
-          "title": {"type": "string", "minLength": 1, "maxLength": 80},
-          "body": {"type": "string", "minLength": 1, "maxLength": 500},
-          "creation_token": {"type": "string"}
+          "place_id": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          },
+          "accuracy_meters": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 100
+          },
+          "captured_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
+      },
+      "CreationTokenResponse": {
+        "type": "object",
+        "required": [
+          "creation_token",
+          "place_id",
+          "expires_at"
+        ],
+        "properties": {
+          "creation_token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "place_id": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateEchoRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "place_id",
+          "content_mode",
+          "title",
+          "creation_token"
+        ],
+        "properties": {
+          "place_id": {
+            "type": "string"
+          },
+          "content_mode": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio",
+              "photo_set",
+              "video"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "body_text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "caption_text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "creation_token": {
+            "type": "string"
+          }
+        }
+      },
+      "EchoPatchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "title": {"type": "string", "minLength": 1, "maxLength": 80},
+          "body_text": {"type": "string", "minLength": 1, "maxLength": 500},
+          "caption_text": {"type": "string", "maxLength": 500}
+        },
+        "description": "Draft content update. Place and content mode are immutable because they are bound to creation proof and media processing."
       },
       "CreateMediaUploadRequest": {
         "type": "object",
-        "required": ["echo_id", "media_type", "content_type", "byte_size"],
+        "additionalProperties": false,
+        "required": [
+          "media_type",
+          "content_type",
+          "byte_size"
+        ],
         "properties": {
-          "echo_id": {"type": "string"},
-          "media_type": {"type": "string", "enum": ["image", "audio", "video"]},
-          "content_type": {"type": "string", "enum": ["image/jpeg", "image/png", "image/heic", "audio/mpeg", "audio/mp4", "audio/wav", "video/mp4", "video/quicktime"]},
-          "byte_size": {"type": "integer", "minimum": 1, "maximum": 104857600}
+          "media_type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "audio",
+              "video"
+            ]
+          },
+          "content_type": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/heic",
+              "audio/mp4",
+              "video/mp4",
+              "video/quicktime"
+            ]
+          },
+          "byte_size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 104857600
+          },
+          "sort_order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4,
+            "default": 0
+          }
         }
+      },
+      "CreateAvatarUploadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["content_type", "byte_size"],
+        "properties": {
+          "content_type": {"type": "string", "enum": ["image/jpeg", "image/png", "image/heic"]},
+          "byte_size": {"type": "integer", "minimum": 1, "maximum": 10485760}
+        }
+      },
+      "SelectAvatarRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["media_asset_id"],
+        "properties": {"media_asset_id": {"type": "string"}}
       },
       "Echo": {
         "type": "object",
-        "required": ["id", "author_handle", "place_id", "title", "body", "status", "public_location", "created_at", "updated_at"],
+        "required": [
+          "id",
+          "author_handle",
+          "place_id",
+          "content_mode",
+          "title",
+          "status",
+          "public_location",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "author_handle": {
+            "type": "string"
+          },
+          "place_id": {
+            "type": "string"
+          },
+          "content_mode": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio",
+              "photo_set",
+              "video"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body_text": {
+            "type": "string"
+          },
+          "caption_text": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "uploading",
+              "processing",
+              "pending_review",
+              "published",
+              "limited",
+              "removed",
+              "deleted",
+              "failed"
+            ]
+          },
+          "public_location": {
+            "$ref": "#/components/schemas/Coordinate"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "stitch_source": {
+            "$ref": "#/components/schemas/StitchSource"
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaAsset"
+            }
+          }
+        }
+      },
+      "MediaAsset": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "media_type", "status", "public_url"],
         "properties": {
           "id": {"type": "string"},
-          "author_handle": {"type": "string"},
-          "place_id": {"type": "string"},
-          "title": {"type": "string"},
-          "body": {"type": "string"},
-          "status": {"type": "string", "enum": ["draft", "published", "limited", "removed", "deleted", "failed"]},
-          "public_location": {"$ref": "#/components/schemas/Coordinate"},
-          "created_at": {"type": "string", "format": "date-time"},
-          "updated_at": {"type": "string", "format": "date-time"}
+          "media_type": {"type": "string", "enum": ["image", "audio", "video"]},
+          "status": {"type": "string", "enum": ["approved"]},
+          "public_url": {"type": "string"},
+          "thumbnail_url": {"type": "string"},
+          "duration_seconds": {"type": "number", "minimum": 0},
+          "transcript": {"type": "string", "description": "Public transcript for approved audio or video media."}
+        }
+      },
+      "StitchSource": {
+        "type": "object",
+        "required": [
+          "echo_id",
+          "title",
+          "author_handle"
+        ],
+        "properties": {
+          "echo_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author_handle": {
+            "type": "string"
+          },
+          "quoted_reply_id": {
+            "type": "string"
+          },
+          "quote_snapshot_url": {
+            "type": "string"
+          },
+          "quote_unavailable": {
+            "type": "boolean"
+          }
         }
       },
       "EchoSummary": {
         "type": "object",
-        "required": ["id", "place_id", "author_id", "title", "body", "status", "published_at"],
+        "required": [
+          "id",
+          "place_id",
+          "author_id",
+          "title",
+          "body",
+          "status",
+          "published_at"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "place_id": {"type": "string"},
-          "author_id": {"type": "string"},
-          "title": {"type": "string"},
-          "body": {"type": "string"},
-          "status": {"type": "string", "enum": ["published"]},
-          "published_at": {"type": "string", "format": "date-time"}
+          "id": {
+            "type": "string"
+          },
+          "place_id": {
+            "type": "string"
+          },
+          "author_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "published"
+            ]
+          },
+          "published_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
-      "ConsentVersion": {"type": "object", "required": ["terms_version", "privacy_version", "disclosure", "effective_at"], "properties": {"terms_version": {"type": "string"}, "privacy_version": {"type": "string"}, "disclosure": {"type": "string"}, "effective_at": {"type": "string", "format": "date-time"}}},
-      "ConsentAcceptanceRequest": {"type": "object", "required": ["terms_version", "privacy_version"], "properties": {"terms_version": {"type": "string"}, "privacy_version": {"type": "string"}}, "description": "Authenticated user is derived from session, not request body."},
-      "PrivacyExportRequest": {"type": "object", "properties": {}, "description": "Authenticated user is derived from session, not request body."},
-      "AccountDeletionRequest": {"type": "object", "properties": {"reason": {"type": "string"}}, "description": "Authenticated user is derived from session, not request body."},
-      "PrivacyJobStatus": {"type": "object", "required": ["job_id", "user_id", "kind", "status", "requested_at"], "properties": {"job_id": {"type": "string"}, "user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["export", "delete"]}, "status": {"type": "string", "enum": ["queued", "processing", "ready", "completed", "failed"]}, "requested_at": {"type": "string", "format": "date-time"}, "download_url": {"type": "string"}}},
-      "AnalyticsOptOutRequest": {"type": "object", "required": ["opt_out"], "properties": {"opt_out": {"type": "boolean"}}, "description": "Authenticated user is derived from session, not request body."},
-      "AnalyticsEventEnvelope": {"type": "object", "additionalProperties": false, "required": ["event_name", "allows_exact_coordinates"], "properties": {"user_id": {"type": "string"}, "event_name": {"type": "string"}, "place_id": {"type": "string"}, "properties": {"type": "object", "additionalProperties": false, "properties": {"surface": {"type": "string"}, "action": {"type": "string"}, "result": {"type": "string"}, "place_id": {"type": "string"}}}, "allows_exact_coordinates": {"type": "boolean", "const": false}}},
-      "InviteCodeRequest": {"type": "object", "required": ["email", "city"], "properties": {"email": {"type": "string", "format": "email"}, "code": {"type": "string"}, "city": {"type": "string"}}},
-      "BetaAccessResponse": {"type": "object", "required": ["state", "message"], "properties": {"state": {"type": "string", "enum": ["invite_required", "city_unavailable", "waitlist", "accepted"]}, "city": {"type": "string"}, "message": {"type": "string"}}},
-      "ReactionRequest": {"type": "object", "required": ["user_id", "kind"], "properties": {"user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["heart", "fire", "sad", "laugh", "clap", "mind_blown"]}}},
-      "ReactionSummary": {"type": "object", "required": ["echo_id", "totals"], "properties": {"echo_id": {"type": "string"}, "totals": {"type": "object", "additionalProperties": {"type": "integer"}}}},
-      "ReplyRequest": {"type": "object", "required": ["user_id", "body"], "properties": {"user_id": {"type": "string"}, "body": {"type": "string", "minLength": 1, "maxLength": 500}, "reply_to": {"type": "string"}}},
-      "Reply": {"type": "object", "required": ["id", "echo_id", "user_id", "body", "posted_at"], "properties": {"id": {"type": "string"}, "echo_id": {"type": "string"}, "user_id": {"type": "string"}, "body": {"type": "string"}, "reply_to": {"type": "string"}, "edited": {"type": "boolean"}, "hidden": {"type": "boolean"}, "posted_at": {"type": "string", "format": "date-time"}}},
-      "RepliesResponse": {"type": "object", "required": ["replies"], "properties": {"replies": {"type": "array", "items": {"$ref": "#/components/schemas/Reply"}}}},
-      "StitchRequest": {"type": "object", "required": ["user_id", "title", "body"], "properties": {"user_id": {"type": "string"}, "source_echo_id": {"type": "string", "description": "Ignored for /echoes/{echoId}/stitches; source comes from path."}, "title": {"type": "string", "minLength": 1, "maxLength": 80}, "body": {"type": "string", "minLength": 1, "maxLength": 2000}}},
-      "Stitch": {"type": "object", "required": ["id", "echo_id", "user_id", "source_echo_id", "title", "body", "created_at"], "properties": {"id": {"type": "string"}, "echo_id": {"type": "string"}, "user_id": {"type": "string"}, "source_echo_id": {"type": "string"}, "title": {"type": "string"}, "body": {"type": "string"}, "created_at": {"type": "string", "format": "date-time"}}},
-      "ReportRequest": {"type": "object", "required": ["reporter_id", "target_type", "target_id", "reason"], "properties": {"reporter_id": {"type": "string"}, "target_type": {"type": "string", "enum": ["echo", "reply", "user"]}, "target_id": {"type": "string"}, "reason": {"type": "string", "minLength": 1, "maxLength": 500}}},
-      "Report": {"type": "object", "required": ["id", "reporter_id", "target_type", "target_id", "reason", "status", "created_at"], "properties": {"id": {"type": "string"}, "reporter_id": {"type": "string"}, "target_type": {"type": "string"}, "target_id": {"type": "string"}, "reason": {"type": "string"}, "status": {"type": "string", "enum": ["pending_review"]}, "created_at": {"type": "string", "format": "date-time"}}},
-      "VisibilityRequest": {"type": "object", "required": ["user_id", "target_id"], "properties": {"user_id": {"type": "string"}, "target_id": {"type": "string"}}},
-      "Notification": {"type": "object", "required": ["id", "user_id", "kind", "actor_id", "target_id", "preview", "created_at"], "properties": {"id": {"type": "string"}, "user_id": {"type": "string"}, "kind": {"type": "string", "enum": ["reaction", "reply", "stitch"]}, "actor_id": {"type": "string"}, "target_id": {"type": "string"}, "preview": {"type": "string"}, "created_at": {"type": "string", "format": "date-time"}}},
-      "NotificationsResponse": {"type": "object", "required": ["notifications"], "properties": {"notifications": {"type": "array", "items": {"$ref": "#/components/schemas/Notification"}}}},
+      "ConsentVersion": {
+        "type": "object",
+        "required": [
+          "terms_version",
+          "privacy_version",
+          "disclosure",
+          "effective_at"
+        ],
+        "properties": {
+          "terms_version": {
+            "type": "string"
+          },
+          "privacy_version": {
+            "type": "string"
+          },
+          "disclosure": {
+            "type": "string"
+          },
+          "effective_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ConsentAcceptanceRequest": {
+        "type": "object",
+        "required": [
+          "terms_version",
+          "privacy_version"
+        ],
+        "properties": {
+          "terms_version": {
+            "type": "string"
+          },
+          "privacy_version": {
+            "type": "string"
+          }
+        },
+        "description": "Authenticated user is derived from session, not request body."
+      },
+      "PrivacyExportRequest": {
+        "type": "object",
+        "properties": {},
+        "description": "Authenticated user is derived from session, not request body."
+      },
+      "AccountDeletionRequest": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        },
+        "description": "Authenticated user is derived from session, not request body."
+      },
+      "PrivacyJobStatus": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "user_id",
+          "kind",
+          "status",
+          "requested_at"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "export",
+              "delete"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "processing",
+              "ready",
+              "completed",
+              "failed"
+            ]
+          },
+          "requested_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "download_url": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminSessionResponse": {
+        "type": "object",
+        "required": [
+          "csrf_token",
+          "role",
+          "expires_at"
+        ],
+        "properties": {
+          "csrf_token": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "moderator",
+              "admin"
+            ]
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AdminQueueItem": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AdminQueuePage": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdminQueueItem"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminMutationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "reason_code",
+          "confirmed"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "reason_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "notes": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "echo",
+              "reply",
+              "user",
+              "place"
+            ]
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "report_id": {
+            "type": "string"
+          },
+          "merge_into_place_id": {
+            "type": "string"
+          },
+          "boundary_geojson": {
+            "type": "object",
+            "description": "Admin-reviewed Polygon or MultiPolygon GeoJSON. Stored as a public Place boundary; never a user creation coordinate.",
+            "additionalProperties": true
+          },
+          "radius_meters": {
+            "type": "number",
+            "minimum": 25,
+            "maximum": 500
+          },
+          "confirmed": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
+      "AdminInviteRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "max_uses",
+          "reason_code",
+          "confirmed"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "max_uses": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason_code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "confirmed": {
+            "type": "boolean",
+            "const": true
+          }
+        }
+      },
+      "AnalyticsOptOutRequest": {
+        "type": "object",
+        "required": [
+          "opt_out"
+        ],
+        "properties": {
+          "opt_out": {
+            "type": "boolean"
+          }
+        },
+        "description": "Authenticated user is derived from session, not request body."
+      },
+      "AnalyticsEventEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event_name",
+          "allows_exact_coordinates"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string"
+          },
+          "event_name": {
+            "type": "string"
+          },
+          "place_id": {
+            "type": "string"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "surface": {
+                "type": "string"
+              },
+              "action": {
+                "type": "string"
+              },
+              "result": {
+                "type": "string"
+              },
+              "place_id": {
+                "type": "string"
+              }
+            }
+          },
+          "allows_exact_coordinates": {
+            "type": "boolean",
+            "const": false
+          }
+        }
+      },
+      "InviteCodeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "city"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "city": {
+            "type": "string"
+          }
+        },
+        "description": "Authenticated user is derived from the session."
+      },
+      "AccountSession": {
+        "type": "object",
+        "required": [
+          "id",
+          "device_name",
+          "created_at",
+          "expires_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AccountAccessState": {
+        "type": "object",
+        "required": ["beta_access_accepted", "consent_accepted", "profile_configured", "quote_warning_acknowledged"],
+        "properties": {
+          "beta_access_accepted": {"type": "boolean"},
+          "consent_accepted": {"type": "boolean"},
+          "profile_configured": {"type": "boolean"},
+          "quote_warning_acknowledged": {"type": "boolean"}
+        }
+      },
+      "AccountSessionsResponse": {
+        "type": "object",
+        "required": [
+          "sessions"
+        ],
+        "properties": {
+          "sessions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountSession"
+            }
+          },
+          "next_cursor": {"type": "string"}
+        }
+      },
+      "BetaAccessResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "message"
+        ],
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "invite_required",
+              "city_unavailable",
+              "waitlist",
+              "accepted"
+            ]
+          },
+          "city": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ReactionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "heart",
+              "fire",
+              "sad",
+              "laugh",
+              "clap",
+              "mind_blown"
+            ]
+          }
+        },
+        "description": "Actor is derived from authentication."
+      },
+      "ReactionSummary": {
+        "type": "object",
+        "required": [
+          "echo_id",
+          "totals"
+        ],
+        "properties": {
+          "echo_id": {
+            "type": "string"
+          },
+          "totals": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "ReplyRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "reply_to": {
+            "type": "string"
+          }
+        },
+        "description": "Actor is derived from authentication."
+      },
+      "ReplyEditRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "body"
+        ],
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        }
+      },
+      "ReplyRevision": {
+        "type": "object",
+        "required": [
+          "revision_number",
+          "body",
+          "created_at"
+        ],
+        "properties": {
+          "revision_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "body": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReplyHistoryResponse": {
+        "type": "object",
+        "required": [
+          "revisions"
+        ],
+        "properties": {
+          "revisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReplyRevision"
+            }
+          }
+        }
+      },
+      "Reply": {
+        "type": "object",
+        "required": [
+          "id",
+          "echo_id",
+          "user_id",
+          "author_handle",
+          "body",
+          "posted_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "echo_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "author_handle": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "reply_to": {
+            "type": "string"
+          },
+          "edited": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "posted_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RepliesResponse": {
+        "type": "object",
+        "required": [
+          "replies"
+        ],
+        "properties": {
+          "replies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Reply"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "StitchRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "place_id",
+          "content_mode",
+          "title",
+          "creation_token"
+        ],
+        "properties": {
+          "place_id": {
+            "type": "string"
+          },
+          "content_mode": {
+            "type": "string",
+            "enum": [
+              "text",
+              "audio",
+              "photo_set",
+              "video"
+            ]
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          },
+          "caption_text": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "creation_token": {
+            "type": "string"
+          },
+          "quoted_reply_id": {
+            "type": "string"
+          },
+          "quote_warning_acknowledged": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "description": "Actor and source Echo are derived from authentication and path. quoted_reply_id captures the current stored Reply revision as an immutable rendered snapshot."
+      },
+      "Stitch": {
+        "type": "object",
+        "required": [
+          "id",
+          "echo_id",
+          "user_id",
+          "source_echo_id",
+          "title",
+          "created_at",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "echo_id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "source_echo_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "quoted_reply_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ReportRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target_type",
+          "category"
+        ],
+        "properties": {
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "echo",
+              "reply",
+              "user"
+            ]
+          },
+          "target_id": {
+            "type": "string",
+            "description": "Required for Echo and Reply reports. Accepted for user reports when already known."
+          },
+          "target_handle": {
+            "type": "string",
+            "description": "Server-resolved public handle for user reports; ignored for Echo and Reply reports."
+          },
+          "category": {
+            "type": "string",
+            "enum": ["harassment", "hate", "sexual_content", "violence_threat", "illegal_dangerous", "privacy_location_safety", "spam_scam", "misinformation", "sensitive_place", "intellectual_property", "other"]
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "deprecated": true
+          }
+        },
+        "description": "Reporter is derived from authentication. Echo and Reply reports require target_id; user reports require target_id or target_handle."
+      },
+      "Report": {
+        "type": "object",
+        "required": [
+          "id",
+          "reporter_id",
+          "target_type",
+          "target_id",
+          "category",
+          "reason",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "reporter_id": {
+            "type": "string"
+          },
+          "target_type": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_review"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AppealRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "moderation_action_id",
+          "body"
+        ],
+        "properties": {
+          "moderation_action_id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          }
+        }
+      },
+      "Appeal": {
+        "type": "object",
+        "required": [
+          "id",
+          "moderation_action_id",
+          "body",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "moderation_action_id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "accepted",
+              "rejected",
+              "withdrawn"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AppealPage": {
+        "type": "object",
+        "required": [
+          "appeals"
+        ],
+        "properties": {
+          "appeals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Appeal"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "VisibilityRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target_id"
+        ],
+        "properties": {
+          "target_id": {
+            "type": "string"
+          }
+        },
+        "description": "Actor is derived from authentication."
+      },
+      "BlockRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "target_id": {
+            "type": "string",
+            "description": "Internal target identifier when already available to the client."
+          },
+          "target_handle": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{2,29}$",
+            "description": "Public handle resolved server-side without exposing a user identifier."
+          }
+        },
+        "anyOf": [
+          {
+            "required": ["target_id"]
+          },
+          {
+            "required": ["target_handle"]
+          }
+        ]
+      },
+      "Notification": {
+        "type": "object",
+        "required": [
+          "id",
+          "user_id",
+          "kind",
+          "actor_id",
+          "target_id",
+          "preview",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "reaction",
+              "reply",
+              "mention",
+              "stitch",
+              "place_alert",
+              "moderation",
+              "upload_status"
+            ]
+          },
+          "actor_id": {
+            "type": "string"
+          },
+          "target_id": {
+            "type": "string"
+          },
+          "preview": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificationsResponse": {
+        "type": "object",
+        "required": [
+          "notifications"
+        ],
+        "properties": {
+          "notifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Notification"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "MarkNotificationsReadRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "notification_ids": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "string"
+            }
+          },
+          "all": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "PlaceSubscription": {
+        "type": "object",
+        "required": [
+          "place_id",
+          "notifications_enabled",
+          "created_at"
+        ],
+        "properties": {
+          "place_id": {
+            "type": "string"
+          },
+          "notifications_enabled": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificationPreferencesPatch": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "direct_activity_enabled": {
+            "type": "boolean"
+          },
+          "place_alerts_enabled": {
+            "type": "boolean"
+          },
+          "moderation_enabled": {
+            "type": "boolean"
+          },
+          "upload_status_enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "NotificationPreferences": {
+        "type": "object",
+        "required": [
+          "direct_activity_enabled",
+          "place_alerts_enabled",
+          "moderation_enabled",
+          "upload_status_enabled",
+          "updated_at"
+        ],
+        "properties": {
+          "direct_activity_enabled": {
+            "type": "boolean"
+          },
+          "place_alerts_enabled": {
+            "type": "boolean"
+          },
+          "moderation_enabled": {
+            "type": "boolean"
+          },
+          "upload_status_enabled": {
+            "type": "boolean"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DeviceRegistrationRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "token",
+          "environment"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "sandbox",
+              "production"
+            ]
+          },
+          "app_version": {
+            "type": "string"
+          },
+          "locale": {
+            "type": "string"
+          },
+          "timezone": {
+            "type": "string"
+          }
+        }
+      },
+      "DeviceRegistration": {
+        "type": "object",
+        "required": [
+          "id",
+          "environment",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "environment": {
+            "type": "string"
+          },
+          "app_version": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "description": "Never contains the raw APNs token."
+      },
       "EmailAuthStartRequest": {
         "type": "object",
-        "required": ["email"],
-        "properties": {"email": {"type": "string", "format": "email"}}
+        "required": [
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
       },
       "EmailAuthStartResponse": {
         "type": "object",
-        "required": ["request_id", "expires_at"],
-        "properties": {"request_id": {"type": "string"}, "expires_at": {"type": "string", "format": "date-time"}}
+        "required": [
+          "request_id",
+          "expires_at"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       },
       "EmailAuthVerifyRequest": {
         "type": "object",
-        "required": ["request_id", "code"],
-        "properties": {"request_id": {"type": "string"}, "code": {"type": "string"}, "device_name": {"type": "string"}}
+        "required": [
+          "request_id",
+          "code"
+        ],
+        "properties": {
+          "request_id": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "device_name": {
+            "type": "string"
+          }
+        }
       },
       "ErrorResponse": {
         "type": "object",
-        "required": ["error"],
+        "required": [
+          "error"
+        ],
         "properties": {
           "error": {
             "type": "object",
-            "required": ["code", "title"],
+            "required": [
+              "code",
+              "title"
+            ],
             "properties": {
-              "code": {"type": "string"},
-              "title": {"type": "string"},
-              "detail": {"type": "string"},
-              "meta": {"type": "object", "additionalProperties": true}
+              "code": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "detail": {
+                "type": "string"
+              },
+              "meta": {
+                "type": "object",
+                "additionalProperties": true
+              }
             }
           }
         }
       },
       "HealthResponse": {
         "type": "object",
-        "required": ["status"],
-        "properties": {"status": {"type": "string", "enum": ["ok"]}}
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
       },
       "Place": {
         "type": "object",
-        "required": ["id", "name", "state"],
+        "required": [
+          "id",
+          "name",
+          "state"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "name": {"type": "string"},
-          "state": {"type": "string", "enum": ["active", "pending_review", "merged", "restricted", "removed", "rejected"]},
-          "aliases": {"type": "array", "items": {"type": "string"}},
-          "provider_mappings": {"type": "array", "items": {"$ref": "#/components/schemas/ProviderMapping"}},
-          "canonical_id": {"type": "string"},
-          "replacement_id": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "active",
+              "pending_review",
+              "merged",
+              "restricted",
+              "removed",
+              "rejected"
+            ]
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "provider_mappings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderMapping"
+            }
+          },
+          "canonical_id": {
+            "type": "string"
+          },
+          "replacement_id": {
+            "type": "string"
+          }
         }
       },
       "MediaUploadResponse": {
         "type": "object",
-        "required": ["upload_id", "media_asset_id", "method", "object_key", "status", "activity_status", "expires_at"],
+        "required": [
+          "upload_id",
+          "media_asset_id",
+          "method",
+          "object_key",
+          "status",
+          "activity_status",
+          "expires_at"
+        ],
         "properties": {
-          "upload_id": {"type": "string"},
-          "media_asset_id": {"type": "string"},
-          "upload_url": {"type": "string", "description": "Present only while upload is active."},
-          "method": {"type": "string", "enum": ["PUT"]},
-          "object_key": {"type": "string"},
-          "status": {"type": "string", "enum": ["created", "uploaded", "expired", "failed"]},
-          "activity_status": {"type": "string", "enum": ["created", "uploaded", "processing", "pending_review", "failed", "expired"]},
-          "transcript_status": {"type": "string", "enum": ["pending", "processing", "succeeded", "failed", "skipped"]},
-          "moderation_status": {"type": "string", "enum": ["pending", "scanning", "approved", "needs_review", "rejected", "failed"]},
-          "moderation_risk": {"type": "string", "enum": ["unknown", "low", "medium", "high"]},
-          "status_reason": {"type": "string"},
-          "expires_at": {"type": "string", "format": "date-time"}
+          "upload_id": {
+            "type": "string"
+          },
+          "media_asset_id": {
+            "type": "string"
+          },
+          "upload_url": {
+            "type": "string",
+            "description": "Present only while upload is active."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "PUT"
+            ]
+          },
+          "object_key": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "uploaded",
+              "expired",
+              "failed"
+            ]
+          },
+          "activity_status": {
+            "type": "string",
+            "enum": [
+              "created",
+              "uploaded",
+              "processing",
+              "pending_review",
+              "failed",
+              "expired"
+            ]
+          },
+          "transcript_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "processing",
+              "succeeded",
+              "failed",
+              "skipped"
+            ]
+          },
+          "moderation_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "scanning",
+              "approved",
+              "needs_review",
+              "rejected",
+              "failed"
+            ]
+          },
+          "moderation_risk": {
+            "type": "string",
+            "enum": [
+              "unknown",
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "status_reason": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "PlaceRequest": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
-          "name": {"type": "string", "minLength": 1},
-          "alias": {"type": "string"},
-          "provider": {"type": "string"},
-          "external_id": {"type": "string"},
-          "coordinate": {"$ref": "#/components/schemas/Coordinate"}
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "alias": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "external_id": {
+            "type": "string"
+          },
+          "coordinate": {
+            "$ref": "#/components/schemas/Coordinate"
+          }
         }
       },
       "PlaceSearchResponse": {
         "type": "object",
-        "required": ["places"],
-        "properties": {"places": {"type": "array", "items": {"$ref": "#/components/schemas/Place"}}}
+        "required": [
+          "places"
+        ],
+        "properties": {
+          "places": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Place"
+            }
+          }
+        }
+      },
+      "EchoDiscoveryResult": {
+        "type": "object",
+        "required": [
+          "echo",
+          "score",
+          "label"
+        ],
+        "properties": {
+          "echo": {
+            "$ref": "#/components/schemas/Echo"
+          },
+          "score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "label": {
+            "type": "string",
+            "enum": [
+              "Recent",
+              "Popular nearby",
+              "From a subscribed Place",
+              "Notable"
+            ]
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "required": [
+          "places",
+          "echoes",
+          "next_cursor"
+        ],
+        "properties": {
+          "places": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Place"
+            }
+          },
+          "echoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EchoDiscoveryResult"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
       },
       "PlaceEchoesResponse": {
         "type": "object",
+        "required": [
+          "echoes",
+          "next_cursor"
+        ],
+        "properties": {
+          "echoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Echo"
+            }
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "PublicProfileEchoesResponse": {
+        "type": "object",
         "required": ["echoes", "next_cursor"],
         "properties": {
-          "echoes": {"type": "array", "items": {"$ref": "#/components/schemas/EchoSummary"}},
+          "echoes": {"type": "array", "items": {"$ref": "#/components/schemas/Echo"}},
           "next_cursor": {"type": "string"}
         }
       },
       "ProviderMapping": {
         "type": "object",
-        "required": ["provider", "external_id"],
-        "properties": {"provider": {"type": "string"}, "external_id": {"type": "string"}}
+        "required": [
+          "provider",
+          "external_id"
+        ],
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "external_id": {
+            "type": "string"
+          }
+        }
+      },
+      "MeProfile": {
+        "type": "object",
+        "required": ["user_id", "email", "handle", "display_name", "created_at", "updated_at"],
+        "properties": {"user_id": {"type": "string"}, "email": {"type": "string", "format": "email"}, "handle": {"type": "string"}, "display_name": {"type": "string"}, "bio": {"type": "string"}, "avatar_url": {"type": "string", "description": "Stable route for an approved, metadata-safe derivative."}, "created_at": {"type": "string", "format": "date-time"}, "updated_at": {"type": "string", "format": "date-time"}, "handle_change_available_at": {"type": "string", "format": "date-time"}}
+      },
+      "PublicProfile": {
+        "type": "object",
+        "required": ["handle", "display_name", "created_at"],
+        "properties": {"handle": {"type": "string"}, "display_name": {"type": "string"}, "bio": {"type": "string"}, "avatar_url": {"type": "string", "description": "Stable route for an approved, metadata-safe derivative."}, "created_at": {"type": "string", "format": "date-time"}}
+      },
+      "UpsertProfileRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["handle", "display_name"],
+        "properties": {"handle": {"type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_]{2,29}$"}, "display_name": {"type": "string", "maxLength": 80}, "bio": {"type": "string", "maxLength": 280}}
       },
       "RefreshSessionRequest": {
         "type": "object",
-        "required": ["refresh_token"],
-        "properties": {"refresh_token": {"type": "string"}}
+        "required": [
+          "refresh_token"
+        ],
+        "properties": {
+          "refresh_token": {
+            "type": "string"
+          }
+        }
       }
     }
   }

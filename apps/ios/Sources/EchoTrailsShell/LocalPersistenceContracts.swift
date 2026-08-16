@@ -16,6 +16,13 @@ public struct SchemaVersion: Equatable, Comparable, Sendable {
         self.major = major
         self.minor = minor
     }
+
+    public static func < (lhs: SchemaVersion, rhs: SchemaVersion) -> Bool {
+        if lhs.major != rhs.major {
+            return lhs.major < rhs.major
+        }
+        return lhs.minor < rhs.minor
+    }
 }
 
 public struct LocalCacheEntityDescriptor: Equatable, Sendable {

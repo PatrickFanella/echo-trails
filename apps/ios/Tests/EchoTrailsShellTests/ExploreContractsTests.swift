@@ -32,4 +32,32 @@ final class ExploreContractsTests: XCTestCase {
         XCTAssertEqual(result.rankingReason, .popularNearby)
         XCTAssertEqual(result.accessibilityLabel, "Explore result: Civic Steps")
     }
+
+    func testWeightedDiscoverySearchBuildsAllSupportedScopes() throws {
+        let city = DiscoverySearchQuery(text: "  murals & music  ", scope: .city)
+        XCTAssertTrue(city.isValid)
+        XCTAssertEqual(city.text, "murals & music")
+        XCTAssertTrue(try XCTUnwrap(city.apiPath).contains("q=murals%20%26%20music"))
+        XCTAssertTrue(try XCTUnwrap(city.apiPath).contains("scope=city"))
+
+        let place = DiscoverySearchQuery(text: "history", scope: .place, placeID: "place/with spaces")
+        XCTAssertTrue(place.isValid)
+        XCTAssertTrue(try XCTUnwrap(place.apiPath).contains("place_id=place/with%20spaces"))
+
+        let nearby = DiscoverySearchQuery(text: "concert", scope: .nearby, latitude: 41.8, longitude: -88.01, radiusMeters: 2_000)
+        let nearbyPath = try XCTUnwrap(nearby.apiPath)
+        XCTAssertTrue(nearbyPath.contains("scope=nearby"))
+        XCTAssertTrue(nearbyPath.contains("lat=41.8"))
+        XCTAssertTrue(nearbyPath.contains("radius_meters=2000"))
+
+        let next = city.withCursor("opaque-_")
+        XCTAssertTrue(try XCTUnwrap(next.apiPath).contains("cursor=opaque-_"))
+    }
+
+    func testWeightedDiscoverySearchRejectsMissingScopeInputs() {
+        XCTAssertNil(DiscoverySearchQuery(text: "", scope: .city).apiPath)
+        XCTAssertNil(DiscoverySearchQuery(text: "echo", scope: .place).apiPath)
+        XCTAssertNil(DiscoverySearchQuery(text: "echo", scope: .nearby).apiPath)
+        XCTAssertNil(DiscoverySearchQuery(text: "echo", scope: .nearby, latitude: 100, longitude: 0).apiPath)
+    }
 }

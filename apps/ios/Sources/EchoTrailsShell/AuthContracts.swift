@@ -25,8 +25,8 @@ public struct EmailAuthenticationRequest: Equatable, Sendable {
 
     public init(email: String) {
         self.email = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        self.startAPIPath = "/auth/email/start"
-        self.verifyAPIPath = "/auth/email/verify"
+        self.startAPIPath = OpenAPIPaths.startEmailAuth
+        self.verifyAPIPath = OpenAPIPaths.verifyEmailAuth
     }
 
     public var isValid: Bool {
@@ -40,7 +40,7 @@ public struct AppleAuthenticationRequest: Equatable, Sendable {
 
     public init(nonce: String) {
         self.nonce = nonce.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.exchangeAPIPath = "/auth/apple"
+        self.exchangeAPIPath = OpenAPIPaths.signInWithApple
     }
 
     public var isValid: Bool {
