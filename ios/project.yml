@@ -1,0 +1,49 @@
+name: EchoTrails
+options:
+  bundleIdPrefix: tv.subcult
+  deploymentTarget:
+    iOS: "18.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+targets:
+  EchoTrails:
+    type: application
+    platform: iOS
+    sources:
+      - path: .
+        excludes:
+          - EchoTrailsTests.swift
+          - EchoTrails.xcodeproj
+          - project.pbxproj
+          - project.yml
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tv.subcult.echotrails
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: EchoTrails
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: EchoTrails uses your location to find nearby Places and Echoes while you are using the app.
+        ASSETCATALOG_COMPILER_APPICON_NAME: ""
+  EchoTrailsTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - EchoTrailsTests.swift
+    dependencies:
+      - target: EchoTrails
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tv.subcult.echotrails.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  EchoTrails:
+    build:
+      targets:
+        EchoTrails: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - EchoTrailsTests
