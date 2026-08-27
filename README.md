@@ -142,4 +142,4 @@ Add `agent:queued` only after human review.
 
 ## License
 
-No license selected yet.
+Licensed under `GPL-3.0-or-later`. See [LICENSE](LICENSE).
