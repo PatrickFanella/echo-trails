@@ -2,10 +2,15 @@ name: verify-baseline
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   verify:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     permissions:
       contents: read
